@@ -1,8 +1,5 @@
 % Insurance Model! SIHR
 
-% make a change
-
-% different branch
 
 S_u_0 = 26e6  %26 million...this is the initial number of uninsured susceptible people (we will use US data here, for now)
 S_i_0 = 300e6  % 300 million
@@ -18,6 +15,10 @@ tf = 200;
 time_steps=100;
 tee=linspace(t0,tf,time_steps);
 [t,y] = ode45(@sihr, tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
+
+myplot(t,y, t0,tf)
+
+function myplot(t,y,t0,tf)
 
 % below we plot the results
 color = get(gca,'colororder'); % different colors for plotting
@@ -82,7 +83,7 @@ plot(t,y(:,10),'-o','Color',color(6,:))
 hold on
 title('Dead (Insured)')
 xlim([t0 tf])
-
+end
 
 function aprime = sihr(t,y)
 
