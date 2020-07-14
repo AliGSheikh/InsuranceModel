@@ -10,10 +10,10 @@ R_u_0 = 0; R_i_0 = 0;
 D_u_0 = 0; D_i_0 = 0; % other initial conditions
 
 
-t_0 = 0;
-t_f = 100;
-time_steps=5;
-tee=linspace(t_0,t_f,time_steps)
+t0 = 0;
+tf = 100;
+time_steps=20;
+tee=linspace(t0,tf,time_steps);
 [t,y] = ode45(@sihr, tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
 
 % below we plot the results
