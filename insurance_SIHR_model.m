@@ -12,7 +12,9 @@ D_u_0 = 0; D_i_0 = 0; % other initial conditions
 
 t_0 = 0;
 t_f = 100;
-[t,y] = ode45(@sihr, [t_0 t_f], [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
+time_steps=5;
+tee=linspace(t_0,t_f,time_steps)
+[t,y] = ode45(@sihr, tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
 
 % below we plot the results
 color = get(gca,'colororder'); % different colors for plotting
@@ -91,7 +93,7 @@ S_i_0 = 300e6;  % 300 million
 
 N = S_u_0 + S_i_0; % total population remainns constant
 
-beta = 1.75; % contact rate. currently an arbitrarily chosen value.  when we include age structuring, we will abandon this in favor of a contact matrix
+beta = Beta(t); % contact rate. currently an arbitrarily chosen value.  when we include age structuring, we will abandon this in favor of a contact matrix
 
 p_i = S_i_0/(S_i_0+S_u_0); % percentage of total population that is insured
 p_u = S_u_0/(S_i_0+S_u_0);
@@ -107,15 +109,39 @@ c_u = (h - p_i*c_i)/p_u; % probability that uninsured symptomatic infected will 
 d_u = 0.6; % probability that uninsured ICU patient will die % we will need to find a systematic way to determine this
 d_i = 0.51; % make sure d_u > d_i
 
+l = L(d_u*H_u, d_i*H_i);
+g = G(d_u*H_u, d_i*H_i);
 
-aprime = [-beta * S_u * I / N;
-    -beta * S_i * I / N;
-    beta * S_u * I / N - c_u * I_u;
-    beta * S_i * I / N - c_i * I_i;
-    c_u * I_u - d_u * H_u;
-    c_i * I_i - d_i * H_i;
-    (1 - c_u) * I_u + (1 - d_u) * H_u;
-    (1 - c_i) * I_i + (1 - d_i) * H_i;
-    d_u * H_u;
-    d_i * H_i;];
+aprime = [-beta * S_u * I / N + l*S_i - g*S_u; % dS_u/dt
+    -beta * S_i * I / N - l*S_i + g*S_u; % dS_i/dt
+    beta * S_u * I / N - c_u * I_u; % dI_u/dt
+    beta * S_i * I / N - c_i * I_i; % dI_i/dt
+    c_u * I_u - d_u * H_u; % dH_u/dt
+    c_i * I_i - d_i * H_i; % dH_i/dt
+    (1 - c_u) * I_u + (1 - d_u) * H_u; % dR_u/dt
+    (1 - c_i) * I_i + (1 - d_i) * H_i; % dR_i/dt
+    d_u * H_u; % dD_u/dt
+    d_i * H_i;]; % dD_i/dt 
+end
+
+function l = L(r1,r2,t)
+% this function returns the rate at which insured susceptible -> uninsured
+% susceptible
+
+l = 0; % dummy value
+end
+
+function g = G(r1,r2,t)
+% this function returns the rate at which uninsured susceptible -> insured
+% susceptible
+
+
+g = 0; % dummy value
+end
+
+function beta = Beta(t)
+% this function returns the time-varying beta
+
+
+beta = 1.75; % default value
 end
