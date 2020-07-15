@@ -46,7 +46,10 @@ N = S_u_0 + S_i_0; % total population remains constant
 
 [t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
 
-myplot(t, y, t0, tf)
+figure; plot(t,y)
+legend %labels lines
+
+%myplot(t, y, t0, tf)
 
 function myplot(t,y,t0,tf)
 
