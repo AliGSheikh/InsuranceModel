@@ -20,7 +20,7 @@ tee=linspace(t0,tf,time_steps);
 p_i = S_i_0/(S_i_0+S_u_0); % percentage of total population that is insured
 p_u = S_u_0/(S_i_0+S_u_0);
 
-h = 0.05; % this the percentage of symptomatic infected people need ICU hospitilization...should be taken from literature or data analysis!
+h = 0.05; % this the percentage of symptomatic infected people who need ICU hospitilization...should be taken from literature or data analysis!
 % h = p_u*c_u + p_i*c_i
 
 c_i = 0.045; % we want to ensure that c_u > c_i so we start with a c_i that is slightly smaller than h
