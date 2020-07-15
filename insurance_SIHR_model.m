@@ -1,11 +1,9 @@
 % Insurance Model! SIHR
 
-%change
-% make a change
-
-% different branch
-
-
+clear all
+close all
+%>>>>>>> df4ba1c8ff5bdf783c43d63be0c3ce7f0e930a52
+%>>>>>>> Stashed changes
 S_u_0 = 26e6  %26 million...this is the initial number of uninsured susceptible people (we will use US data here, for now)
 S_i_0 = 300e6  % 300 million
 
@@ -92,7 +90,16 @@ end
 
 function aprime = sihr(t,y)
 
-S_u = y(1); S_i = y(2); I_u = y(3); I_i = y(4); H_u = y(5); H_i = y(6); R_u = y(7); R_i = y(8); D_u = y(9); D_i = y(10);
+S_u = y(1); 
+S_i = y(2); 
+I_u = y(3); 
+I_i = y(4); 
+H_u = y(5); 
+H_i = y(6); 
+R_u = y(7); 
+R_i = y(8); 
+D_u = y(9); 
+D_i = y(10);
 
 I =  I_u+I_i;
 
