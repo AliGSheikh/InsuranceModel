@@ -51,7 +51,7 @@ for n = 1:size(unemployment_vector, 2)-1
 end
 size(daily_unemployment_vec)
 
-unemployment_factor = 0; % on or off    
+unemployment_factor = 1; % on or off    
 
 N = S_u_0 + S_i_0; % total population remains constant
 
@@ -146,12 +146,13 @@ beta = Beta(t);  % contact rate. currently an arbitrarily chosen value.  when we
 l =0; 
 g =0;
 
+D_i+D_u
 
 if unemployment_factor ~= 0
     if daily_unemployment_vec(round(t)) > 0
-        l = eta*daily_unemployment_vec(round(t))
+        l = eta*daily_unemployment_vec(round(t));
     elseif daily_unemployment_vec(round(t)) < 0
-        g = -eta*daily_unemployment_vec(round(t))
+        g = -eta*daily_unemployment_vec(round(t));
     end
 end
 aprime = [-beta * S_u * I / N + l * S_i - g * S_u; % dS_u/dt
