@@ -51,11 +51,11 @@ for n = 1:size(unemployment_vector, 2)-1
 end
 size(daily_unemployment_vec)
 
-    
+unemployment_factor = 0; % on or off    
 
 N = S_u_0 + S_i_0; % total population remains constant
 
-[t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, daily_unemployment_vec, eta), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
+[t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, daily_unemployment_vec, eta, unemployment_factor), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
 
 myplot(t, y, t0, tf)
 
@@ -126,7 +126,7 @@ title('Dead (Insured)')
 xlim([t0 tf])
 end
 
-function aprime = sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, daily_unemployment_vec, eta)
+function aprime = sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, daily_unemployment_vec, eta, unemployment_factor)
 
 S_u = y(1); 
 S_i = y(2); 
@@ -146,14 +146,14 @@ beta = Beta(t);  % contact rate. currently an arbitrarily chosen value.  when we
 l =0; 
 g =0;
 
-round(t)
-%daily_unemployment_vec(t)
-if daily_unemployment_vec(round(t)) > 0
-    l = eta*daily_unemployment_vec(round(t))
-elseif daily_unemployment_vec(round(t)) < 0
-    g = -eta*daily_unemployment_vec(round(t))
-end
 
+if unemployment_factor ~= 0
+    if daily_unemployment_vec(round(t)) > 0
+        l = eta*daily_unemployment_vec(round(t))
+    elseif daily_unemployment_vec(round(t)) < 0
+        g = -eta*daily_unemployment_vec(round(t))
+    end
+end
 aprime = [-beta * S_u * I / N + l * S_i - g * S_u; % dS_u/dt
     -beta * S_i * I / N - l * S_i + g * S_u; % dS_i/dt
     beta * S_u * I / N - (gamma_u * c_u * I_u) - delta_u * (1-c_u) * I_u; % dI_u/dt
