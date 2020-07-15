@@ -1,8 +1,6 @@
 % Insurance Model! SIHR
 
-% make a change
 
-% different branch
 
 S_u_0 = 26e6  %26 million...this is the initial number of uninsured susceptible people (we will use US data here, for now)
 S_i_0 = 300e6  % 300 million
