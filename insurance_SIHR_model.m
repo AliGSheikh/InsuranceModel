@@ -83,7 +83,12 @@ ksi_i = 1/3;
 
 
 
-[t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, contact_matrix), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
+y_0 = [S_u_0 S_i_0 I_u_0 I_i_0 H_u_0 H_i_0 R_u_0 R_i_0 D_u_0 D_i_0];
+
+
+
+
+[t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, contact_matrix), tee, y_0); 
 
 figure; plot(t,y)
 legend %labels lines
@@ -159,38 +164,51 @@ end
 
 function aprime = sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, contact_matrix)
 
-S_u = y(1); 
-S_i = y(2); 
-I_u = y(3); 
-I_i = y(4); 
-H_u = y(5); 
-H_i = y(6); 
-R_u = y(7); 
-R_i = y(8); 
-D_u = y(9); 
-D_i = y(10);
+y = reshape(y,[10,9]);
+S_u = y(1,:) ;
+S_i = y(2,:); 
+I_u = y(3,:); 
+I_i = y(4,:); 
+H_u = y(5,:); 
+H_i = y(6,:); 
+R_u = y(7,:); 
+R_i = y(8,:); 
+D_u = y(9,:); 
+D_i = y(10,:);
+size(S_u)
+
 
 M_S_u = diag(S_u);
+
+size(M_S_u)
+size(contact_matrix)
+
 
 M_S_i = diag(S_i);
 
 
 I =  I_u+I_i;
 
+size(I)
+
+
 beta = Beta(t);  % contact rate. currently an arbitrarily chosen value.  when we include age structuring, we will abandon this in favor of a contact matrix
 
 
 
-aprime = [-beta * (I  * C * M_S_u) .* (1/N); % dS_u/dt
-    -beta * (I  * C * M_S_i) .* (1/N) ; % dS_i/dt
-    beta * (I  * C * M_S_u) .* (1/N) - (gamma_u * c_u * I_u) - delta_u * (1-c_u) * I_u; % dI_u/dt
-    -beta * (I  * C * M_S_i) .* (1/N) - (gamma_i * c_i * I_i) - delta_i * (1-c_i) * I_i; % dI_i/dt
-    gamma_u * c_u * I_u - (ksi_u * d_u * H_u) - alpha_u * (1 - d_u) * H_u; % dH_u/dt
-    gamma_i * c_i * I_i - (ksi_i * d_i * H_i) - alpha_i * (1 - d_i) * H_i; % dH_i/dt
-    delta_u * (1-c_u) * I_u + alpha_u * (1 - d_u) * H_u; % dR_u/dt
-    delta_i * (1-c_i) * I_i + alpha_i * (1 - d_i) * H_i; % dR_i/dt
-    ksi_u * d_u * H_u; % dD_u/dt
-    ksi_i * d_i * H_i;]; % dD_i/dt 
+aprime = [-beta * (I  * contact_matrix * M_S_u) .* (1/N), % dS_u/dt
+    -beta * (I  * contact_matrix * M_S_i) .* (1/N), % dS_i/dt
+    beta * (I  * contact_matrix * M_S_u) .* (1/N) - (gamma_u * c_u * I_u) - delta_u * (1-c_u) * I_u, % dI_u/dt
+    -beta * (I  * contact_matrix * M_S_i) .* (1/N) - (gamma_i * c_i * I_i) - delta_i * (1-c_i) * I_i, % dI_i/dt
+    gamma_u * c_u * I_u - (ksi_u * d_u * H_u) - alpha_u * (1 - d_u) * H_u, % dH_u/dt
+    gamma_i * c_i * I_i - (ksi_i * d_i * H_i) - alpha_i * (1 - d_i) * H_i, % dH_i/dt
+    delta_u * (1-c_u) * I_u + alpha_u * (1 - d_u) * H_u, % dR_u/dt
+    delta_i * (1-c_i) * I_i + alpha_i * (1 - d_i) * H_i, % dR_i/dt
+    ksi_u * d_u * H_u, % dD_u/dt
+    ksi_i * d_i * H_i]; % dD_i/dt 
+size(aprime)
+aprime=reshape(aprime, [1 90])'; %doing something strange to get this running
+size(aprime)
 end
 
 
