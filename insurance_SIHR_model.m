@@ -49,12 +49,13 @@ unemployment_vector = unemployment_vector/100; % percent -> fraction
 daily_unemployment_vec = interp1(1:length(unemployment_vector), unemployment_vector, 1:1/30:length(unemployment_vector)) % adds 30 points between each end-of-month unemployment fraction 
 
 unemployment_factor = 1; % on or off    
+time_varying_beta = 1;
 
 N = S_u_0 + S_i_0; % total population remains constant
 
 
 %-----Let's solve this thing!
-[t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, daily_unemployment_vec, eta, unemployment_factor), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
+[t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, daily_unemployment_vec, eta, unemployment_factor, time_varying_beta), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
 
 
 %-------------Let's plot the results
@@ -127,7 +128,7 @@ title('Dead (Insured)')
 xlim([t0 tf])
 end
 
-function aprime = sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, daily_unemployment_vec, eta, unemployment_factor)
+function aprime = sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, daily_unemployment_vec, eta, unemployment_factor, time_varying_beta_on)
 
 S_u = y(1); 
 S_i = y(2); 
@@ -142,7 +143,7 @@ D_i = y(10);
 
 I =  I_u+I_i;
 
-beta = Beta(t);  % contact rate. currently an arbitrarily chosen value.  when we include age structuring, we will abandon this in favor of a contact matrix
+beta = Beta(t, time_varying_beta_on);  % contact rate. currently an arbitrarily chosen value.  when we include age structuring, we will abandon this in favor of a contact matrix
 
 l =0; 
 g =0;
@@ -168,9 +169,12 @@ end
 
 
 
-function beta = Beta(t)
+function beta = Beta(t,on)
 % this function returns the time-varying beta
-
-
 beta = 0.25; % default value
+if on == 1
+    events = [0.25, 0.25, 0.25, 0.2, 0.15, 0.25];
+    beta_vec = interp1(1:length(events), events, 1:1/30:length(events)) % adds 30 points between each  
+    beta = beta_vec(round(t));    
+end
 end
