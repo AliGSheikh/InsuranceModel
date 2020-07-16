@@ -3,8 +3,43 @@
 clear all
 close all
 
-S_u_0 = 26e6  %26 million...this is the initial number of uninsured susceptible people (we will use US data here, for now)
-S_i_0 = 300e6  % 300 million
+
+contact_matrix = [25 10 5 10 5 5 5 5 5;
+    10 40 10 5 15 10 5 5 5;
+    5 10 20 15 10 10 5 5 5;
+    10 5 15 20 10 10 5 5 5;
+    5 15 10 10 10 10 5 5 5;
+    5 10 10 10 10 5 5 5 5;
+    5 5 5 5 5 5 5 10 5;
+    5 5 5 5 5 5 10 10 10;
+    5 5 5 5 5 5 5 10 10;]; % the average number of daily contacts between age groups % let's have 9 age groups as in https://arxiv.org/pdf/2004.04144.pdf
+
+issymmetric(contact_matrix) % make sure it's symmetric...just checking
+
+contact_matrix = contact_matrix./sum(contact_matrix,1) % we want to make it so that sum of each row and column is 1...how to do this??...close enough for now
+
+S_u_0_total = 26e6;  %26 million...this is the initial number of uninsured susceptible people (we will use US data here, for now)
+S_i_0_total = 300e6;  % 300 million
+
+uninsured_fraction_by_age = [.05 .09 .16 .21 .18 .16 .13 .01 .01];  %sum should be 1
+
+insured_fraction_by_age = 1-uninsured_fraction_by_age
+
+S_u_0 = S_u_0_total * uninsured_fraction_by_age
+
+sum(S_u_0)
+
+S_i_0 = S_i_0_total * insured_fraction_by_age
+sum(S_i_0)
+
+M_S_u_0 = diag(S_u_0);
+
+M_S_i_0 = diag(S_i_0);
+
+
+
+N = sum(S_u_0) + sum(S_i_0) % total population remains constant
+
 
 I_u_0 = 20; I_i_0 = 20;
 H_u_0 = 0; H_i_0 = 0;
@@ -42,7 +77,7 @@ ksi_i = 1/3;
 
 
 
-N = S_u_0 + S_i_0; % total population remains constant
+
 
 [t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
 
@@ -136,11 +171,9 @@ I =  I_u+I_i;
 beta = Beta(t);  % contact rate. currently an arbitrarily chosen value.  when we include age structuring, we will abandon this in favor of a contact matrix
 
 
-l = L(d_u*H_u, d_i*H_i, t);
-g = G(d_u*H_u, d_i*H_i, t);
 
-aprime = [-beta * S_u * I / N + l * S_i - g * S_u; % dS_u/dt
-    -beta * S_i * I / N - l * S_i + g * S_u; % dS_i/dt
+aprime = [-beta * S_u * I / N ; % dS_u/dt
+    -beta * S_i * I / N ; % dS_i/dt
     beta * S_u * I / N - (gamma_u * c_u * I_u) - delta_u * (1-c_u) * I_u; % dI_u/dt
     beta * S_i * I / N - (gamma_i * c_i * I_i) - delta_i * (1-c_i) * I_i; % dI_i/dt
     gamma_u * c_u * I_u - (ksi_u * d_u * H_u) - alpha_u * (1 - d_u) * H_u; % dH_u/dt
@@ -151,20 +184,7 @@ aprime = [-beta * S_u * I / N + l * S_i - g * S_u; % dS_u/dt
     ksi_i * d_i * H_i;]; % dD_i/dt 
 end
 
-function l = L(r1,r2,t)
-% this function returns the rate at which insured susceptible -> uninsured
-% susceptible
 
-l = 0; % dummy value
-end
-
-function g = G(r1,r2,t)
-% this function returns the rate at which uninsured susceptible -> insured
-% susceptible
-
-
-g = 0; % dummy value
-end
 
 function beta = Beta(t)
 % this function returns the time-varying beta
