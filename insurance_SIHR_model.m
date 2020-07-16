@@ -3,7 +3,7 @@
 clear all
 close all
 
-
+num_age_groups = 9;
 contact_matrix = [25 10 5 10 5 5 5 5 5;
     10 40 10 5 15 10 5 5 5;
     5 10 20 15 10 10 5 5 5;
@@ -21,30 +21,34 @@ contact_matrix = contact_matrix./sum(contact_matrix,1) % we want to make it so t
 S_u_0_total = 26e6;  %26 million...this is the initial number of uninsured susceptible people (we will use US data here, for now)
 S_i_0_total = 300e6;  % 300 million
 
-uninsured_fraction_by_age = [.05 .09 .16 .21 .18 .16 .13 .01 .01];  %sum should be 1
+uninsured_fraction_by_age = [.05 .09 .16 .21 .18 .16 .13 .01 .01];  %sum should be 1...derived from https://www.census.gov/library/stories/2018/09/who-are-the-uninsured.html
 
-insured_fraction_by_age = 1-uninsured_fraction_by_age
+insured_fraction_by_age = 1-uninsured_fraction_by_age;
+
+fraction_of_total_pop_by_age = [.11 .11 .11 .13 .13 .13 .14 .07 .07];  % sum is 1
 
 S_u_0 = S_u_0_total * uninsured_fraction_by_age
 
 sum(S_u_0)
 
-S_i_0 = S_i_0_total * insured_fraction_by_age
+S_i_0 = (S_u_0_total+S_i_0_total) * fraction_of_total_pop_by_age .* insured_fraction_by_age % something funky is happening here...I will look at this later
 sum(S_i_0)
 
-M_S_u_0 = diag(S_u_0);
-
-M_S_i_0 = diag(S_i_0);
 
 
 
-N = sum(S_u_0) + sum(S_i_0) % total population remains constant
+
+N = sum(S_u_0) + sum(S_i_0) % total population remains constant  % we aren't getting what we're supposed to get but let's look at it later
 
 
-I_u_0 = 20; I_i_0 = 20;
-H_u_0 = 0; H_i_0 = 0;
-R_u_0 = 0; R_i_0 = 0; 
-D_u_0 = 0; D_i_0 = 0; % other initial conditions
+I_u_0 = [0 1 1 1 0 0 0 0 0]; 
+I_i_0 = [0 1 1 1 0 0 0 0 0];
+H_u_0 = zeros(1,num_age_groups); 
+H_i_0 = zeros(1,num_age_groups);
+R_u_0 = zeros(1,num_age_groups); 
+R_i_0 = zeros(1,num_age_groups); 
+D_u_0 = zeros(1,num_age_groups); 
+D_i_0 = zeros(1,num_age_groups); % other initial conditions
 
 
 t0 = 0;
@@ -79,7 +83,7 @@ ksi_i = 1/3;
 
 
 
-[t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
+[t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, contact_matrix), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
 
 figure; plot(t,y)
 legend %labels lines
@@ -153,7 +157,7 @@ title('Dead (Insured)')
 xlim([t0 tf])
 end
 
-function aprime = sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i)
+function aprime = sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, contact_matrix)
 
 S_u = y(1); 
 S_i = y(2); 
@@ -166,16 +170,21 @@ R_i = y(8);
 D_u = y(9); 
 D_i = y(10);
 
+M_S_u = diag(S_u);
+
+M_S_i = diag(S_i);
+
+
 I =  I_u+I_i;
 
 beta = Beta(t);  % contact rate. currently an arbitrarily chosen value.  when we include age structuring, we will abandon this in favor of a contact matrix
 
 
 
-aprime = [-beta * S_u * I / N ; % dS_u/dt
-    -beta * S_i * I / N ; % dS_i/dt
-    beta * S_u * I / N - (gamma_u * c_u * I_u) - delta_u * (1-c_u) * I_u; % dI_u/dt
-    beta * S_i * I / N - (gamma_i * c_i * I_i) - delta_i * (1-c_i) * I_i; % dI_i/dt
+aprime = [-beta * (I  * C * M_S_u) .* (1/N); % dS_u/dt
+    -beta * (I  * C * M_S_i) .* (1/N) ; % dS_i/dt
+    beta * (I  * C * M_S_u) .* (1/N) - (gamma_u * c_u * I_u) - delta_u * (1-c_u) * I_u; % dI_u/dt
+    -beta * (I  * C * M_S_i) .* (1/N) - (gamma_i * c_i * I_i) - delta_i * (1-c_i) * I_i; % dI_i/dt
     gamma_u * c_u * I_u - (ksi_u * d_u * H_u) - alpha_u * (1 - d_u) * H_u; % dH_u/dt
     gamma_i * c_i * I_i - (ksi_i * d_i * H_i) - alpha_i * (1 - d_i) * H_i; % dH_i/dt
     delta_u * (1-c_u) * I_u + alpha_u * (1 - d_u) * H_u; % dR_u/dt
