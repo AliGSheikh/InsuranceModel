@@ -35,9 +35,6 @@ S_i_0 = (S_u_0_total+S_i_0_total) * fraction_of_total_pop_by_age .* insured_frac
 sum(S_i_0)
 
 
-
-
-
 N = sum(S_u_0) + sum(S_i_0) % total population remains constant  % we aren't getting what we're supposed to get but let's look at it later
 
 
@@ -218,6 +215,5 @@ end
 function beta = Beta(t)
 % this function returns the time-varying beta
 
-
-beta = 0.25; % default value
+%beta = 0.25; % default value
 end
