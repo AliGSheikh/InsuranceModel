@@ -173,7 +173,7 @@ function beta = Beta(t,on)
 % this function returns the time-varying beta
 beta = 0.25; % default value
 if on == 1
-    events = [0.25, 0.25, 0.25, 0.2, 0.15, 0.25];
+    events = [0.25, 0.25, 0.25, 0.2, 0.15, 0.25]; % this is taken from data...represents changes in beta month to month starting in january
     beta_vec = interp1(1:length(events), events, 1:1/30:length(events)) % adds 30 points between each  
     beta = beta_vec(round(t));    
 end
