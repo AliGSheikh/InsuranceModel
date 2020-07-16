@@ -1,9 +1,7 @@
 % Insurance Model! SIHR
-
 clear all
 close all
-%>>>>>>> df4ba1c8ff5bdf783c43d63be0c3ce7f0e930a52
-%>>>>>>> Stashed changes
+
 S_u_0 = 26e6  %26 million...this is the initial number of uninsured susceptible people (we will use US data here, for now)
 S_i_0 = 300e6  % 300 million
 
