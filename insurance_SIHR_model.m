@@ -42,14 +42,15 @@ ksi_u = 1/3;    % death rate from ICU
 ksi_i = 1/3;
 
 eta = 1/30;  % rate at which insured susceptible -> uninsured susceptible  (30 days <- we need to figure out if this is viable number!)
-unemployment_vector = [3.6, 14, 10, 1, 2, 14]; % unemployment percent each month jan 2020 to june 2020...taken from https://data.bls.gov/timeseries/LNS14000000
+unemployment_vector = [3.6, 3.5, 4.4, 14.7, 13.3, 11.1]; % unemployment percent each month jan 2020 to june 2020...taken from https://data.bls.gov/timeseries/LNS14000000
 baseline_unemployment_fraction = 3.6; % take an average pre-pandemic value
 unemployment_vector = unemployment_vector-baseline_unemployment_fraction;
 unemployment_vector = unemployment_vector/100; % percent -> fraction
-daily_unemployment_vec = interp1(1:length(unemployment_vector), unemployment_vector, 1:1/30:length(unemployment_vector)) % adds 30 points between each end-of-month unemployment fraction 
+daily_unemployment_vec = interp1(1:length(unemployment_vector), unemployment_vector, 1:1/30:length(unemployment_vector)); % adds 30 points between each end-of-month unemployment fraction 
 
-unemployment_factor = 1; % on or off    
+unemployment_factor = 0; % on or off, 0 is off  
 time_varying_beta = 1;
+
 
 N = S_u_0 + S_i_0; % total population remains constant
 
@@ -59,73 +60,115 @@ N = S_u_0 + S_i_0; % total population remains constant
 
 
 %-------------Let's plot the results
-myplot(t, y, t0, tf)
+plotCompartmentsSeparately(t, y, t0, tf, unemployment_factor, time_varying_beta, daily_unemployment_vec)
 
-function myplot(t,y,t0,tf)
+function plotCompartmentsSeparately(t,y,t0,tf, unemployment_factor, time_varying_beta, unemployment_vec)
 
 % below we plot the results
 color = get(gca,'colororder'); % different colors for plotting
 
 figure(1)
-subplot(5,2,1)
+subplot(7,2,1)
 plot(t,y(:,1),'-o','Color',color(1,:))
 hold on
 title('Susceptible (Uninsured)')
 xlim([t0 tf])
+dim = [.02 .02 .02 .02];
+str = strcat('unemployment feedback? ', num2str(unemployment_factor) , ' ', 'time varying beta? ', num2str(time_varying_beta));
+annotation('textbox',dim,'String',str,'FitBoxToText','on');
 
-subplot(5,2,2)
+subplot(7,2,2)
 plot(t,y(:,2),'-o','Color',color(2,:))
 hold on
 title('Susceptible (Insured)')
 xlim([t0 tf])
 
-subplot(5,2,3)
+subplot(7,2,3)
 plot(t,y(:,3),'-o','Color',color(3,:))
 hold on
 title('Infected (Uninsured)')
 xlim([t0 tf])
 
-subplot(5,2,4)
+subplot(7,2,4)
 plot(t,y(:,4),'-o','Color',color(4,:))
 hold on
 title('Infected (Insured)')
 xlim([t0 tf])
 
-subplot(5,2,5)
+subplot(7,2,5)
 plot(t,y(:,5),'-o','Color',color(5,:))
 hold on
 title('ICU Hospitalized (Uninsured)')
 xlim([t0 tf])
 
-subplot(5,2,6)
+subplot(7,2,6)
 plot(t,y(:,6),'-o','Color',color(6,:))
 hold on
 title('ICU Hospitalized (Insured)')
 xlim([t0 tf])
 
-subplot(5,2,7)
+subplot(7,2,7)
 plot(t,y(:,7),'-o','Color',color(5,:))
 hold on
 title('Recovered (Uninsured)')
 xlim([t0 tf])
 
-subplot(5,2,8)
+subplot(7,2,8)
 plot(t,y(:,8),'-o','Color',color(6,:))
 hold on
 title('Recovered (Insured)')
 xlim([t0 tf])
 
- subplot(5,2,9)
+subplot(7,2,9)
 plot(t,y(:,9),'-o','Color',color(5,:))
 hold on
 title('Dead (Uninsured)')
 xlim([t0 tf])
 
-subplot(5,2,10)
+subplot(7,2,10)
 plot(t,y(:,10),'-o','Color',color(6,:))
 hold on
 title('Dead (Insured)')
 xlim([t0 tf])
+
+
+% below we plot beta and unemployment
+events = [0.25, 0.25, 0.25, 0.2, 0.15, 0.25]; % this is taken from data...represents changes in beta month to month starting in january
+beta_vec = interp1(1:length(events), events, 1:1/30:length(events)); % adds 30 points between each 
+
+size(t)
+beta_vec(:,151)=  [] % need to delete element so that size is same as t vector
+unemployment_vec(:,151) = []
+size(beta_vec)
+
+
+
+subplot(7,2,11)
+plot(t,beta_vec','-o','Color',color(7,:))
+hold on
+title('Beta')
+xlim([t0 tf])
+
+size(unemployment_vec)
+subplot(7,2,13)
+plot(t,unemployment_vec','-o','Color',color(7,:))
+hold on
+title('Unemployment')
+xlim([t0 tf])
+
+subplot(7,2,12)
+plot(t,beta_vec','-o','Color',color(7,:))
+hold on
+title('Beta')
+xlim([t0 tf])
+
+size(unemployment_vec)
+subplot(7,2,14)
+plot(t,unemployment_vec','-o','Color',color(7,:))
+hold on
+title('Unemployment')
+xlim([t0 tf])
+
 end
 
 function aprime = sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, daily_unemployment_vec, eta, unemployment_factor, time_varying_beta_on)
@@ -174,7 +217,7 @@ function beta = Beta(t,on)
 beta = 0.25; % default value
 if on == 1
     events = [0.25, 0.25, 0.25, 0.2, 0.15, 0.25]; % this is taken from data...represents changes in beta month to month starting in january
-    beta_vec = interp1(1:length(events), events, 1:1/30:length(events)) % adds 30 points between each  
+    beta_vec = interp1(1:length(events), events, 1:1/30:length(events)); % adds 30 points between each  
     beta = beta_vec(round(t));    
 end
 end
