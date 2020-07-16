@@ -2,6 +2,8 @@
 
 clear all
 close all
+
+% -----------------------initial condiitions------------------------------
 S_u_0 = 26e6  %26 million...this is the initial number of uninsured susceptible people (we will use US data here, for now)
 S_i_0 = 300e6  % 300 million
 
@@ -10,7 +12,7 @@ H_u_0 = 0; H_i_0 = 0;
 R_u_0 = 0; R_i_0 = 0; 
 D_u_0 = 0; D_i_0 = 0; % other initial conditions
 
-
+%--------- 
 t0 = 1;
 tf = 150; % unit = days
 time_steps=150;
@@ -40,23 +42,22 @@ ksi_u = 1/3;    % death rate from ICU
 ksi_i = 1/3;
 
 eta = 1/30;  % rate at which insured susceptible -> uninsured susceptible  (30 days <- we need to figure out if this is viable number!)
-unemployment_vector = [3.6, 3.5, 4.4, 14.7, 13.3, 11.1]; % unemployment percent each month jan 2020 to june 2020...taken from https://data.bls.gov/timeseries/LNS14000000
+unemployment_vector = [3.6, 14, 10, 1, 2, 14]; % unemployment percent each month jan 2020 to june 2020...taken from https://data.bls.gov/timeseries/LNS14000000
 baseline_unemployment_fraction = 3.6; % take an average pre-pandemic value
 unemployment_vector = unemployment_vector-baseline_unemployment_fraction;
 unemployment_vector = unemployment_vector/100; % percent -> fraction
-daily_unemployment_vec = [];
-for n = 1:size(unemployment_vector, 2)-1
-    A = linspace(unemployment_vector(1,n), unemployment_vector(1,n+1), 30);
-    daily_unemployment_vec = [daily_unemployment_vec A];
-end
-size(daily_unemployment_vec)
+daily_unemployment_vec = interp1(1:length(unemployment_vector), unemployment_vector, 1:1/30:length(unemployment_vector)) % adds 30 points between each end-of-month unemployment fraction 
 
 unemployment_factor = 1; % on or off    
 
 N = S_u_0 + S_i_0; % total population remains constant
 
+
+%-----Let's solve this thing!
 [t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, daily_unemployment_vec, eta, unemployment_factor), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
 
+
+%-------------Let's plot the results
 myplot(t, y, t0, tf)
 
 function myplot(t,y,t0,tf)
@@ -146,10 +147,8 @@ beta = Beta(t);  % contact rate. currently an arbitrarily chosen value.  when we
 l =0; 
 g =0;
 
-D_i+D_u
-
-if unemployment_factor ~= 0
-    if daily_unemployment_vec(round(t)) > 0
+if unemployment_factor ~= 0 
+    if daily_unemployment_vec(round(t)) > 0  %note: t is not necessarily an integer so we round
         l = eta*daily_unemployment_vec(round(t));
     elseif daily_unemployment_vec(round(t)) < 0
         g = -eta*daily_unemployment_vec(round(t));
