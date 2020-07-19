@@ -3,7 +3,9 @@
 clear all
 close all
 
+
 % -----------------------initial condiitions------------------------------
+
 S_u_0 = 26e6  %26 million...this is the initial number of uninsured susceptible people (we will use US data here, for now)
 S_i_0 = 300e6  % 300 million
 
@@ -21,7 +23,7 @@ tee=linspace(t0,tf,time_steps);
 p_i = S_i_0/(S_i_0+S_u_0); % percentage of total population that is insured
 p_u = S_u_0/(S_i_0+S_u_0);
 
-h = 0.05; % this the percentage of symptomatic infected people need ICU hospitilization...should be taken from literature or data analysis!
+h = 0.05; % this the percentage of symptomatic infected people who need ICU hospitilization...should be taken from literature or data analysis!
 % h = p_u*c_u + p_i*c_i
 
 c_i = 0.045; % we want to ensure that c_u > c_i so we start with a c_i that is slightly smaller than h
@@ -55,11 +57,17 @@ time_varying_beta = 1;
 N = S_u_0 + S_i_0; % total population remains constant
 
 
+
 %-----Let's solve this thing!
 [t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, daily_unemployment_vec, eta, unemployment_factor, time_varying_beta), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
 
 
 %-------------Let's plot the results
+
+figure(); 
+plot(t,y)
+legend %labels lines
+
 plotCompartmentsSeparately(t, y, t0, tf, unemployment_factor, time_varying_beta, daily_unemployment_vec)
 
 function plotCompartmentsSeparately(t,y,t0,tf, unemployment_factor, time_varying_beta, unemployment_vec)
@@ -67,7 +75,7 @@ function plotCompartmentsSeparately(t,y,t0,tf, unemployment_factor, time_varying
 % below we plot the results
 color = get(gca,'colororder'); % different colors for plotting
 
-figure(1)
+figure()
 subplot(7,2,1)
 plot(t,y(:,1),'-o','Color',color(1,:))
 hold on
