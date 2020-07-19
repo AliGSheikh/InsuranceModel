@@ -1,25 +1,26 @@
 % Insurance Model! SIHR
-
-<<<<<<< HEAD
-
-
-=======
 clear all
 close all
->>>>>>> df4ba1c8ff5bdf783c43d63be0c3ce7f0e930a52
-S_u_0 = 26e6  %26 million...this is the initial number of uninsured susceptible people (we will use US data here, for now)
-S_i_0 = 300e6  % 300 million
 
-I_u_0 = 20; I_i_0 = 20;
-H_u_0 = 0; H_i_0 = 0;
-R_u_0 = 0; R_i_0 = 0; 
-D_u_0 = 0; D_i_0 = 0; % other initial conditions
+S_u_0 = 300e6  %26 million...this is the initial number of uninsured susceptible people (we will use US data here, for now)
+S_i_0 = 300e6  % 300 million initial number of insured susceptible people
+
+% other initial conditions
+I_u_0 = 20; % # of infected uninsured people 
+I_i_0 = 20; % # of infected insured people
+H_u_0 = 0; %  # of hospitalized uninsured ppl
+H_i_0 = 0; % # of hospitalized insured ppl 
+R_u_0 = 0; % # of recovered uinsured ppl
+R_i_0 = 0; 
+D_u_0 = 0; % # of death (uninsured)
+D_i_0 = 0; 
 
 
-t0 = 0;
-tf = 200;
-time_steps=100;
-tee=linspace(t0,tf,time_steps);
+t0 = 0;  
+tf = 200; % range of grapth is from 0 to 200
+time_steps=101;
+tee=linspace(t0,tf,time_steps); %note: you can also do linspace(t0,tf) which returns a row vector of 100 evenly spaced points between 0 and 200
+
 
 p_i = S_i_0/(S_i_0+S_u_0); % percentage of total population that is insured
 p_u = S_u_0/(S_i_0+S_u_0);
@@ -35,7 +36,7 @@ c_u = (h - p_i*c_i)/p_u % probability that uninsured symptomatic infected will n
 d_u = 0.6; % probability that uninsured ICU patient will die % we will need to find a systematic way to determine this
 d_i = 0.55; % make sure d_u > d_i
 
-alpha_u = 1/14; % rate at which ICU Hosptializations rocever
+alpha_u = 1/30; % rate at which ICU Hosptializations recover
 alpha_i = 1/14; 
 delta_u = 1/14; % rate at which infected recover (without need for ICU hospitalization)
 delta_i = 1/14;
@@ -47,10 +48,101 @@ ksi_i = 1/3;
 
 
 N = S_u_0 + S_i_0; % total population remains constant
-
+%calling ode45 to solve equations
 [t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
 
-myplot(t, y, t0, tf)
+%h_u = y(:,5);
+%h_max_u= max(h_u) %store max in entire column , most # ICU beds at one point
+%h_tot_u= sum(h_u)* %adding all the hosp. at every time step
+%%
+myplot(t, y, t0, tf)  
+
+pltdir='./'; %directory to save file
+fnm='TestPlot'; %basename for file
+fntsz=16;
+labels={'S_u','S_i','I_u','I_i','H_u','H_i','R_u','R_i','D_u','D_i'};
+pltcolors={'blue','blue','red','red','green','green','magenta','magenta','cyan','cyan'};
+pltstyles={'--','-'};
+figure('Position',[100,100,800,400]);
+hold on;
+set(gca,'FontSize',fntsz,'defaultTextInterpreter','latex')
+Nu=sum(y(:,1:2:end),2); %compute total uninsured at each time
+Ni=sum(y(:,2:2:end),2); %compoute total insured at each time
+Ncompartments=size(y,2)/2;
+for jj=1:Ncompartments
+    %plot fraction uninsured in each compartment
+    plot(t,y(:,2*jj-1)./Nu,'LineWidth',2,'Color',pltcolors{2*jj-1},'LineStyle','-')
+    %plot fraction insured in each compartment
+    plot(t,y(:,2*jj)./Ni,'LineWidth',2,'Color',pltcolors{2*jj},'LineStyle','--')
+end
+legend(labels); %legend
+xlim([t0 tf])
+xlabel('$t$ (days)')
+ylabel('fraction of insured or uninsured')
+%save as eps file with base name and tack on initial uninsured
+print([pltdir fnm 'SuInit' num2str(S_u_0)  '.eps'],'-depsc')
+legend(labels); %legend
+xlim([t0 tf])
+xlabel('$t$ (days)')
+ylabel('fraction of insured or uninsured')
+%save as eps file with base name and tack on initial uninsured
+print([pltdir fnm 'SuInit' num2str(S_u_0)  '.eps'],'-depsc')
+
+%%
+function aprime = sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i)
+
+S_u = y(1); 
+S_i = y(2); 
+I_u = y(3); 
+I_i = y(4); 
+H_u = y(5); 
+H_i = y(6); 
+R_u = y(7); 
+R_i = y(8); 
+D_u = y(9); 
+D_i = y(10);
+
+I =  I_u+I_i;
+
+beta = Beta(t);  % contact rate. currently an arbitrarily chosen value.  when we include age structuring, we will abandon this in favor of a contact matrix
+
+
+l = L(d_u*H_u, d_i*H_i, t); % ?
+g = G(d_u*H_u, d_i*H_i, t); % ?
+
+aprime = [-beta * S_u * I / N + l * S_i - g * S_u; % dS_u/dt
+    -beta * S_i * I / N - l * S_i + g * S_u; % dS_i/dt
+    beta * S_u * I / N - (gamma_u * c_u * I_u) - delta_u * (1-c_u) * I_u; % dI_u/dt
+    beta * S_i * I / N - (gamma_i * c_i * I_i) - delta_i * (1-c_i) * I_i; % dI_i/dt
+    gamma_u * c_u * I_u - (ksi_u * d_u * H_u) - alpha_u * (1 - d_u) * H_u; % dH_u/dt
+    gamma_i * c_i * I_i - (ksi_i * d_i * H_i) - alpha_i * (1 - d_i) * H_i; % dH_i/dt
+    delta_u * (1-c_u) * I_u + alpha_u * (1 - d_u) * H_u; % dR_u/dt
+    delta_i * (1-c_i) * I_i + alpha_i * (1 - d_i) * H_i; % dR_i/dt
+    ksi_u * d_u * H_u; % dD_u/dt
+    ksi_i * d_i * H_i;]; % dD_i/dt 
+end
+
+function l = L(r1,r2,t) %r1 represents what?
+% this function returns the rate at which insured susceptible -> uninsured
+% susceptible
+
+l = 0; % dummy value
+end
+
+function g = G(r1,r2,t)
+% this function returns the rate at which uninsured susceptible -> insured
+% susceptible
+
+
+g = 0; % dummy value
+end
+
+function beta = Beta(t)
+% this function returns the time-varying beta
+
+beta = 0.25; % default value
+
+end
 
 function myplot(t,y,t0,tf)
 
@@ -117,59 +209,6 @@ plot(t,y(:,10),'-o','Color',color(6,:))
 hold on
 title('Dead (Insured)')
 xlim([t0 tf])
+
 end
 
-function aprime = sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i)
-
-S_u = y(1); 
-S_i = y(2); 
-I_u = y(3); 
-I_i = y(4); 
-H_u = y(5); 
-H_i = y(6); 
-R_u = y(7); 
-R_i = y(8); 
-D_u = y(9); 
-D_i = y(10);
-
-I =  I_u+I_i;
-
-beta = Beta(t);  % contact rate. currently an arbitrarily chosen value.  when we include age structuring, we will abandon this in favor of a contact matrix
-
-
-l = L(d_u*H_u, d_i*H_i, t);
-g = G(d_u*H_u, d_i*H_i, t);
-
-aprime = [-beta * S_u * I / N + l * S_i - g * S_u; % dS_u/dt
-    -beta * S_i * I / N - l * S_i + g * S_u; % dS_i/dt
-    beta * S_u * I / N - (gamma_u * c_u * I_u) - delta_u * (1-c_u) * I_u; % dI_u/dt
-    beta * S_i * I / N - (gamma_i * c_i * I_i) - delta_i * (1-c_i) * I_i; % dI_i/dt
-    gamma_u * c_u * I_u - (ksi_u * d_u * H_u) - alpha_u * (1 - d_u) * H_u; % dH_u/dt
-    gamma_i * c_i * I_i - (ksi_i * d_i * H_i) - alpha_i * (1 - d_i) * H_i; % dH_i/dt
-    delta_u * (1-c_u) * I_u + alpha_u * (1 - d_u) * H_u; % dR_u/dt
-    delta_i * (1-c_i) * I_i + alpha_i * (1 - d_i) * H_i; % dR_i/dt
-    ksi_u * d_u * H_u; % dD_u/dt
-    ksi_i * d_i * H_i;]; % dD_i/dt 
-end
-
-function l = L(r1,r2,t)
-% this function returns the rate at which insured susceptible -> uninsured
-% susceptible
-
-l = 0; % dummy value
-end
-
-function g = G(r1,r2,t)
-% this function returns the rate at which uninsured susceptible -> insured
-% susceptible
-
-
-g = 0; % dummy value
-end
-
-function beta = Beta(t)
-% this function returns the time-varying beta
-
-
-beta = 0.25; % default value
-end
