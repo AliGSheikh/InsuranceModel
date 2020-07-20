@@ -36,7 +36,6 @@ c_u = (h - p_i*c_i)/p_u % probability that uninsured symptomatic infected will n
 d_u = 0.6; % probability that uninsured ICU patient will die % we will need to find a systematic way to determine this
 d_i = 0.55; % make sure d_u > d_i
 
-alpha_u = 1/30; % rate at which ICU Hosptializations recover
 alpha_i = 1/14; 
 delta_u = 1/14; % rate at which infected recover (without need for ICU hospitalization)
 delta_i = 1/14;
