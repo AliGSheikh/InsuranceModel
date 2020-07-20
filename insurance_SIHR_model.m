@@ -17,7 +17,7 @@ D_u_0 = 0; D_i_0 = 0; % other initial conditions
 %--------- 
 t0 = 1;
 tf = 150; % unit = days
-time_steps=150;
+time_steps = 150;
 tee=linspace(t0,tf,time_steps);
 
 p_i = S_i_0/(S_i_0+S_u_0); % percentage of total population that is insured
@@ -69,6 +69,61 @@ plot(t,y)
 legend %labels lines
 
 plotCompartmentsSeparately(t, y, t0, tf, unemployment_factor, time_varying_beta, daily_unemployment_vec)
+
+
+
+function aprime = sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, daily_unemployment_vec, eta, unemployment_factor, time_varying_beta_on)
+
+S_u = y(1); 
+S_i = y(2); 
+I_u = y(3); 
+I_i = y(4); 
+H_u = y(5); 
+H_i = y(6); 
+R_u = y(7); 
+R_i = y(8); 
+D_u = y(9); 
+D_i = y(10);
+
+I =  I_u+I_i;
+
+beta = Beta(t, time_varying_beta_on);  % contact rate. currently an arbitrarily chosen value.  when we include age structuring, we will abandon this in favor of a contact matrix
+
+l =0; 
+g =0;
+
+if unemployment_factor ~= 0 
+    if daily_unemployment_vec(round(t)) > 0  %note: t is not necessarily an integer so we round
+        l = eta*daily_unemployment_vec(round(t));
+    elseif daily_unemployment_vec(round(t)) < 0
+        g = -eta*daily_unemployment_vec(round(t));
+    end
+end
+
+aprime = [-beta * S_u * I / N + l * S_i - g * S_u; % dS_u/dt
+    -beta * S_i * I / N - l * S_i + g * S_u; % dS_i/dt
+    beta * S_u * I / N - (gamma_u * c_u * I_u) - delta_u * (1-c_u) * I_u; % dI_u/dt
+    beta * S_i * I / N - (gamma_i * c_i * I_i) - delta_i * (1-c_i) * I_i; % dI_i/dt
+    gamma_u * c_u * I_u - (ksi_u * d_u * H_u) - alpha_u * (1 - d_u) * H_u; % dH_u/dt
+    gamma_i * c_i * I_i - (ksi_i * d_i * H_i) - alpha_i * (1 - d_i) * H_i; % dH_i/dt
+    delta_u * (1-c_u) * I_u + alpha_u * (1 - d_u) * H_u; % dR_u/dt
+    delta_i * (1-c_i) * I_i + alpha_i * (1 - d_i) * H_i; % dR_i/dt
+    ksi_u * d_u * H_u; % dD_u/dt
+    ksi_i * d_i * H_i;]; % dD_i/dt 
+end
+
+
+
+function beta = Beta(t,on)
+% this function returns the time-varying beta
+beta = 0.25; % default value
+if on == 1
+    events = [0.25, 0.25, 0.25, 0.2, 0.15, 0.25]; % this is taken from data...represents changes in beta month to month starting in january
+    beta_vec = interp1(1:length(events), events, 1:1/30:length(events)); % adds 30 points between each  
+    beta = beta_vec(round(t));    
+end
+end
+
 
 function plotCompartmentsSeparately(t,y,t0,tf, unemployment_factor, time_varying_beta, unemployment_vec)
 
@@ -177,55 +232,4 @@ hold on
 title('Unemployment')
 xlim([t0 tf])
 
-end
-
-function aprime = sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, daily_unemployment_vec, eta, unemployment_factor, time_varying_beta_on)
-
-S_u = y(1); 
-S_i = y(2); 
-I_u = y(3); 
-I_i = y(4); 
-H_u = y(5); 
-H_i = y(6); 
-R_u = y(7); 
-R_i = y(8); 
-D_u = y(9); 
-D_i = y(10);
-
-I =  I_u+I_i;
-
-beta = Beta(t, time_varying_beta_on);  % contact rate. currently an arbitrarily chosen value.  when we include age structuring, we will abandon this in favor of a contact matrix
-
-l =0; 
-g =0;
-
-if unemployment_factor ~= 0 
-    if daily_unemployment_vec(round(t)) > 0  %note: t is not necessarily an integer so we round
-        l = eta*daily_unemployment_vec(round(t));
-    elseif daily_unemployment_vec(round(t)) < 0
-        g = -eta*daily_unemployment_vec(round(t));
-    end
-end
-aprime = [-beta * S_u * I / N + l * S_i - g * S_u; % dS_u/dt
-    -beta * S_i * I / N - l * S_i + g * S_u; % dS_i/dt
-    beta * S_u * I / N - (gamma_u * c_u * I_u) - delta_u * (1-c_u) * I_u; % dI_u/dt
-    beta * S_i * I / N - (gamma_i * c_i * I_i) - delta_i * (1-c_i) * I_i; % dI_i/dt
-    gamma_u * c_u * I_u - (ksi_u * d_u * H_u) - alpha_u * (1 - d_u) * H_u; % dH_u/dt
-    gamma_i * c_i * I_i - (ksi_i * d_i * H_i) - alpha_i * (1 - d_i) * H_i; % dH_i/dt
-    delta_u * (1-c_u) * I_u + alpha_u * (1 - d_u) * H_u; % dR_u/dt
-    delta_i * (1-c_i) * I_i + alpha_i * (1 - d_i) * H_i; % dR_i/dt
-    ksi_u * d_u * H_u; % dD_u/dt
-    ksi_i * d_i * H_i;]; % dD_i/dt 
-end
-
-
-
-function beta = Beta(t,on)
-% this function returns the time-varying beta
-beta = 0.25; % default value
-if on == 1
-    events = [0.25, 0.25, 0.25, 0.2, 0.15, 0.25]; % this is taken from data...represents changes in beta month to month starting in january
-    beta_vec = interp1(1:length(events), events, 1:1/30:length(events)); % adds 30 points between each  
-    beta = beta_vec(round(t));    
-end
 end
