@@ -15,7 +15,8 @@ D_u_0 = 0; D_i_0 = 0; % other initial conditions
 
 N = S_u_0 + S_i_0; % total population remains constant
 
-%---------setting and computing parameters -------%
+
+%---------setting and computing parameters ----------------------------%
 beta = 0.5 % contact rate % taken from literature...mask or not to mask paper here
 
 p_i = S_i_0/(S_i_0+S_u_0); % percentage of total population that is insured
@@ -43,7 +44,7 @@ ksi_i = 1/3;
 
 
 
-%---------assimilating unemployment data---------------%
+%---------assimilating unemployment data--------------------------------%
 
 eta = 1/30;  % rate at which insured susceptible -> uninsured susceptible  (30 days <- we need to figure out if this is viable number!)
 
@@ -51,24 +52,28 @@ unemployment_data = [3.6, 3.5, 4.4, 14.7, 13.3, 11.1]; % unemployment percent ea
 unemployment_vector = AssimilateMonthlyUnemploymentData(unemployment_data);
 
 
+
+
 %----------gain
 
+t_start_coverage  = 5; % day on which universal coverage is passed
+coverage_implementation_window = 100 % days in which all susceptible uninsured become susceptible insured 
 
-
+universal_coverage_feature = 1; % 0 is off
 unemployment_feature = 1; % on or off, 0 is off ...this helps us simulate baseline resutlts
 time_varying_beta = 0; % 0 is off
 
 
 
 
-%-----Let's solve this thing!-----------------
+%----------Let's solve this thing!-----------------
 t0 = 1;
 tf = 150; % unit = days
 time_steps = 150;
 tee=linspace(t0,tf,time_steps);
 
 
-[t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, eta, unemployment_feature, time_varying_beta, beta), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
+[t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, t_start_coverage, coverage_implementation_window), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
 
 
 %-------------Let's plot the results-----------------
@@ -83,7 +88,7 @@ plotCompartmentsSeparately(t, y, t0, tf, unemployment_feature, time_varying_beta
 
 %----------function declarations/definitions below this line------------%
 
-function aprime = sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, daily_unemployment_vec, eta, unemployment_feature, time_varying_beta_on, default_beta)
+function aprime = sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, daily_unemployment_vec, eta, unemployment_feature, time_varying_beta_on, default_beta, universal_coverage_feature, t_start_coverage, coverage_implementation_window)
 
 S_u = y(1); 
 S_i = y(2); 
@@ -106,8 +111,10 @@ beta = Beta(default_beta, t, time_varying_beta_on);  % contact rate. currently a
 
 l = 0; 
 g = 0;
- 
-if unemployment_feature ~= 0 
+
+if (t > t_start_coverage) & (universal_coverage_feature ~= 0)
+    g = 1/5;
+elseif unemployment_feature ~= 0  % we don't allow unemployment data once universal coverage is in play
     if daily_unemployment_vec(round(t)) > 0  %note: t is not necessarily an integer so we round
         l = eta*daily_unemployment_vec(round(t));
     elseif daily_unemployment_vec(round(t)) < 0
