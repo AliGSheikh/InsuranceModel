@@ -3,22 +3,20 @@
 clear all
 close all
 
-
-% -----------------------initial condiitions------------------------------
+% -----------------------initial population------------------------------
 
 S_u_0 = 26e6  %26 million...this is the initial number of uninsured susceptible people (we will use US data here, for now)
 S_i_0 = 300e6  % 300 million
 
-I_u_0 = 20; I_i_0 = 20;
+I_u_0 = 1; I_i_0 = 1;
 H_u_0 = 0; H_i_0 = 0;
 R_u_0 = 0; R_i_0 = 0; 
 D_u_0 = 0; D_i_0 = 0; % other initial conditions
 
-%--------- 
-t0 = 1;
-tf = 150; % unit = days
-time_steps = 150;
-tee=linspace(t0,tf,time_steps);
+N = S_u_0 + S_i_0; % total population remains constant
+
+%---------setting and computing parameters -------%
+beta = 0.5 % contact rate % taken from literature...mask or not to mask paper here
 
 p_i = S_i_0/(S_i_0+S_u_0); % percentage of total population that is insured
 p_u = S_u_0/(S_i_0+S_u_0);
@@ -43,36 +41,49 @@ gamma_i = 1/5;
 ksi_u = 1/3;    % death rate from ICU
 ksi_i = 1/3;
 
+
+
+%---------assimilating unemployment data---------------%
+
 eta = 1/30;  % rate at which insured susceptible -> uninsured susceptible  (30 days <- we need to figure out if this is viable number!)
-unemployment_vector = [3.6, 3.5, 4.4, 14.7, 13.3, 11.1]; % unemployment percent each month jan 2020 to june 2020...taken from https://data.bls.gov/timeseries/LNS14000000
-baseline_unemployment_fraction = 3.6; % take an average pre-pandemic value
-unemployment_vector = unemployment_vector-baseline_unemployment_fraction;
-unemployment_vector = unemployment_vector/100; % percent -> fraction
-daily_unemployment_vec = interp1(1:length(unemployment_vector), unemployment_vector, 1:1/30:length(unemployment_vector)); % adds 30 points between each end-of-month unemployment fraction 
 
-unemployment_factor = 0; % on or off, 0 is off  
-time_varying_beta = 1;
+unemployment_data = [3.6, 3.5, 4.4, 14.7, 13.3, 11.1]; % unemployment percent each month jan 2020 to june 2020...taken from https://data.bls.gov/timeseries/LNS14000000
+unemployment_vector = AssimilateMonthlyUnemploymentData(unemployment_data);
 
 
-N = S_u_0 + S_i_0; % total population remains constant
+%----------gain
 
 
 
-%-----Let's solve this thing!
-[t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, daily_unemployment_vec, eta, unemployment_factor, time_varying_beta), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
+unemployment_feature = 1; % on or off, 0 is off ...this helps us simulate baseline resutlts
+time_varying_beta = 0; % 0 is off
 
 
-%-------------Let's plot the results
+
+
+%-----Let's solve this thing!-----------------
+t0 = 1;
+tf = 150; % unit = days
+time_steps = 150;
+tee=linspace(t0,tf,time_steps);
+
+
+[t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, eta, unemployment_feature, time_varying_beta, beta), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
+
+
+%-------------Let's plot the results-----------------
 
 figure(); 
 plot(t,y)
 legend %labels lines
 
-plotCompartmentsSeparately(t, y, t0, tf, unemployment_factor, time_varying_beta, daily_unemployment_vec)
+plotCompartmentsSeparately(t, y, t0, tf, unemployment_feature, time_varying_beta, unemployment_vector)
 
 
 
-function aprime = sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, daily_unemployment_vec, eta, unemployment_factor, time_varying_beta_on)
+%----------function declarations/definitions below this line------------%
+
+function aprime = sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, daily_unemployment_vec, eta, unemployment_feature, time_varying_beta_on, default_beta)
 
 S_u = y(1); 
 S_i = y(2); 
@@ -85,20 +96,25 @@ R_i = y(8);
 D_u = y(9); 
 D_i = y(10);
 
-I =  I_u+I_i;
 
-beta = Beta(t, time_varying_beta_on);  % contact rate. currently an arbitrarily chosen value.  when we include age structuring, we will abandon this in favor of a contact matrix
+%sprintf('total pop across all compartments at time %d', t) %DEBUG REMOVE
+%disp(S_u+S_i+I_u+I_i+H_u+H_i+R_i+R_u+D_u+D_i) %DEBUG_REMOVE
 
-l =0; 
-g =0;
+I = I_u + I_i;
 
-if unemployment_factor ~= 0 
+beta = Beta(default_beta, t, time_varying_beta_on);  % contact rate. currently an arbitrarily chosen value.  when we include age structuring, we will abandon this in favor of a contact matrix
+
+l = 0; 
+g = 0;
+ 
+if unemployment_feature ~= 0 
     if daily_unemployment_vec(round(t)) > 0  %note: t is not necessarily an integer so we round
         l = eta*daily_unemployment_vec(round(t));
     elseif daily_unemployment_vec(round(t)) < 0
         g = -eta*daily_unemployment_vec(round(t));
     end
 end
+
 
 aprime = [-beta * S_u * I / N + l * S_i - g * S_u; % dS_u/dt
     -beta * S_i * I / N - l * S_i + g * S_u; % dS_i/dt
@@ -112,13 +128,20 @@ aprime = [-beta * S_u * I / N + l * S_i - g * S_u; % dS_u/dt
     ksi_i * d_i * H_i;]; % dD_i/dt 
 end
 
+function daily_unemployment_vec = AssimilateMonthlyUnemploymentData(data)
 
+baseline_unemployment_fraction = data(1); % take an average pre-pandemic value
+unemployment_vector = data-baseline_unemployment_fraction;
+unemployment_vector = unemployment_vector/100; % percent -> fraction
+daily_unemployment_vec = interp1(1:length(unemployment_vector), unemployment_vector, 1:1/30:length(unemployment_vector)); % adds 30 points between each end-of-month unemployment fraction 
 
-function beta = Beta(t,on)
+end
+
+function beta = Beta(default_val,t,on)
 % this function returns the time-varying beta
-beta = 0.25; % default value
+beta = default_val; % default value
 if on == 1
-    events = [0.25, 0.25, 0.25, 0.2, 0.15, 0.25]; % this is taken from data...represents changes in beta month to month starting in january
+    events = [0.5, 0.25, 0.25, 0.2, 0.15, 0.4]; % this is taken from data...represents changes in beta month to month starting in january
     beta_vec = interp1(1:length(events), events, 1:1/30:length(events)); % adds 30 points between each  
     beta = beta_vec(round(t));    
 end
@@ -196,36 +219,18 @@ xlim([t0 tf])
 
 
 % below we plot beta and unemployment
-events = [0.25, 0.25, 0.25, 0.2, 0.15, 0.25]; % this is taken from data...represents changes in beta month to month starting in january
-beta_vec = interp1(1:length(events), events, 1:1/30:length(events)); % adds 30 points between each 
+size(t); %DEBUG_REMOVE
+unemployment_vec(:,151) = []; % have to remove one entry to match size of t vector
 
-size(t)
-beta_vec(:,151)=  [] % need to delete element so that size is same as t vector
-unemployment_vec(:,151) = []
-size(beta_vec)
-
-
-
-subplot(7,2,11)
-plot(t,beta_vec','-o','Color',color(7,:))
-hold on
-title('Beta')
-xlim([t0 tf])
-
-size(unemployment_vec)
+size(unemployment_vec); %DEBUG_REMOVE
 subplot(7,2,13)
 plot(t,unemployment_vec','-o','Color',color(7,:))
 hold on
 title('Unemployment')
 xlim([t0 tf])
 
-subplot(7,2,12)
-plot(t,beta_vec','-o','Color',color(7,:))
-hold on
-title('Beta')
-xlim([t0 tf])
 
-size(unemployment_vec)
+size(unemployment_vec) %DEBUG_REMOVE
 subplot(7,2,14)
 plot(t,unemployment_vec','-o','Color',color(7,:))
 hold on
