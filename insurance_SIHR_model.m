@@ -190,7 +190,7 @@ end
 function compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_window, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
     mat = [];
     for start_day = 1:20
-        for k = 1:100 % we will take 1/k to be the fraction gaining coverage on each time step
+        for k = 1:300 % we will take 1/k to be the fraction gaining coverage on each time step
             [t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, 1/k, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, start_day, coverage_implementation_window, 1/k), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
             mat(start_day,k) = getPeakDeaths(y(9),y(10));
         end
