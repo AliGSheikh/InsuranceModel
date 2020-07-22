@@ -18,7 +18,7 @@ N = S_u_0 + S_i_0; % total population remains constant
 
 
 %---------setting and computing parameters ----------------------------%
-beta = 0.5; % contact rate % taken from literature...mask or not to mask paper here
+beta = 0.25; % contact rate % taken from literature...mask or not to mask paper here
 
 p_i = S_i_0/(S_i_0+S_u_0); % percentage of total population that is insured
 p_u = S_u_0/(S_i_0+S_u_0);
@@ -52,16 +52,15 @@ ksi_i = 1/3;
 eta = 1/30;  % rate at which insured susceptible -> uninsured susceptible  (30 days <- we need to figure out if this is viable number!)
 
 unemployment_data = [3.6, 3.5, 4.4, 14.7, 13.3, 11.1]; % unemployment percent each month jan 2020 to june 2020...taken from https://data.bls.gov/timeseries/LNS14000000
-diff(unemployment_data) %DEBUG_REMOVE
 unemployment_vector = AssimilateMonthlyUnemploymentData(unemployment_data);
 
 
 
 
 %----------gain of coverage--------
-t_start_coverage  = 20; % day on which universal coverage is passed  % TINKER WITH ME
+t_start_coverage  = 100; % day on which universal coverage is passed  % TINKER WITH ME
 
-fraction_each_time_step_that_gains_coverage = 1/10; % TINKER WITH ME! % for step function
+fraction_each_time_step_that_gains_coverage = 1/20; % TINKER WITH ME! % for step function
 
 delta_period = 10;  % relevant if using periodic delta gain function
 
@@ -91,10 +90,23 @@ tee=linspace(t0,tf,time_steps);
 
 
 %-------------Let's plot the results-----------------
+S_u = y(:,1); 
+S_i = y(:,2); 
+I_u = y(:,3); 
+I_i = y(:,4); 
+H_u = y(:,5); 
+H_i = y(:,6); 
+R_u = y(:,7); 
+R_i = y(:,8); 
+D_u = y(:,9); 
+D_i = y(:,10);
+
 
 compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_type, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
-%getPeakICUHospitalizations(y(5),y(6))
-%getPeakDeaths(y(9),y(10))
+getPeakInfections(I_u,I_i)
+getPeakICUHospitalizations(H_u,H_i)
+getTotalDeaths(D_u, D_i)
+
 
 %figure(); 
 %plot(t,y)
@@ -202,31 +214,40 @@ val = max(combined_vec);
     
 end
 
-function val = getPeakDeaths(uninsured_vec,insured_vec)
+function val = getTotalDeaths(uninsured_vec,insured_vec)
 combined_vec = uninsured_vec + insured_vec;
 val = max(combined_vec);
     
 end
 
 function compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_type, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
-    mat = [];
+    peak_deaths = [];
+    peak_hosp = [];
+    total_start_days=140;
     if coverage_implementation_type == 1 %step func
-        for start_day = 1:20
-            for k = 1:50 % we will take 1/k to be the fraction gaining coverage on each time step
+        for start_day = 1:total_start_days
+            for k = 1:200 % we will take 1/k to be the fraction gaining coverage on each time step
                 [t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, start_day, coverage_implementation_type,1/k,1), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
-                mat(start_day,k) = getPeakDeaths(y(9),y(10));
+                peak_deaths(start_day,k) = getTotalDeaths(y(:,9),y(:,10));
+                peak_hosp(start_day,k) = getPeakICUHospitalizations(y(:,5),y(:,6));
             end
         end
-        [C,h] = contourf(mat)
+        [C,h] = contourf(peak_deaths)
         clabel(C,h)
         title('Total Death')
         xlabel('k (note: 1/k is the fraction of uninsured that gains coverage each day)') 
         ylabel('Start of Coverage (# days after start of pandemic)') 
+        figure()
+        [C,h] = contourf(peak_hosp)
+        clabel(C,h)
+        title('Peak Hosp')
+        xlabel('k (note: 1/k is the fraction of uninsured that gains coverage each day)') 
+        ylabel('Start of Coverage (# days after start of pandemic)')
     elseif coverage_implementation_type == 2 %periodic delta
-        for start_day = 1:20
+        for start_day = 1:total_start_days
             for k = 1:30 % we will take 1/k to be the fraction gaining coverage on each time step
                 [t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, start_day, coverage_implementation_type,1 , k), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
-                mat(start_day,k) = getPeakDeaths(y(9),y(10));
+                mat(start_day,k) = getPeakDeaths(y(:,9),y(:,10));
             end
         end
         [C,h] = contourf(mat)
@@ -239,7 +260,7 @@ function compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, de
 
 end
 
-function plotCompartmentsSeparately(t,y,t0,tf, unemployment_factor, time_varying_beta, unemployment_vec)
+function plotCompartmentsSeparately(t,y,t0,tf, unemployment_factor, time_varying_beta, unemployment_vec, g)
 
 % below we plot the results
 color = get(gca,'colororder'); % different colors for plotting
@@ -306,13 +327,6 @@ subplot(7,2,10)
 plot(t,y(:,10),'-o','Color',color(6,:))
 hold on
 title('Dead (Insured)')
-xlim([t0 tf])
-
-
-subplot(7,2,11)
-plot(t,g,'-o','Color',color(7,:))
-hold on
-title('universal coverage')
 xlim([t0 tf])
 
 
