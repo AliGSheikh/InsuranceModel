@@ -16,6 +16,8 @@ D_u_0 = 0; D_i_0 = 0; % other initial conditions
 N = S_u_0 + S_i_0; % total population remains constant
 
 
+sprintf("S_u_0/S_i_0 %d", S_u_0/S_i_0) %DEBUG_REMOVE
+
 %---------setting and computing parameters ----------------------------%
 beta = 0.5; % contact rate % taken from literature...mask or not to mask paper here
 
@@ -65,8 +67,8 @@ coverage_implementation_window = 100; % days in which all susceptible uninsured 
 
 
 %----------turn off or on features-------------
-universal_coverage_feature = 1; % 0 is off
-unemployment_feature = 1; % on or off, 0 is off ...this helps us simulate baseline resutlts
+universal_coverage_feature = 0; % 0 is off
+unemployment_feature = 0; % on or off, 0 is off ...this helps us simulate baseline resutlts
 time_varying_beta = 0; % 0 is off
 
 
@@ -83,15 +85,30 @@ tee=linspace(t0,tf,time_steps);
 
 %-------------Let's plot the results-----------------
 
-compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_window, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
-getPeakICUHospitalizations(y(5),y(6))
-getPeakDeaths(y(9),y(10))
+%compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_window, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
+%getPeakICUHospitalizations(y(5),y(6))
+%getPeakDeaths(y(9),y(10))
 
 %figure(); 
 %plot(t,y)
 %legend %labels lines
 
 %plotCompartmentsSeparately(t, y, t0, tf, unemployment_feature, time_varying_beta, unemployment_vector)
+
+% plot I_u/I_i in an effort to do a rough calculation of R_0
+
+ratio = y(:,3)./(y(:,3)+y(:,4))
+plot(t,ratio)
+xlabel('time (days)')
+ylabel('I_u/I')
+xticks([0 5 10 15 20 25 30 35 40 45 50 75 100 125 150])
+hold on
+S_u_0/N
+yline(S_u_0/N, "-", 'S_u_0/N')
+
+
+
+r_0 = beta/( (delta_u*(1-c_u) + gamma_u*c_u)*0.08  +(delta_i*(1-c_i) + gamma_i*c_i)*0.92 )
 
 
 
@@ -110,11 +127,20 @@ R_i = y(8);
 D_u = y(9); 
 D_i = y(10);
 
+I = I_u + I_i;
 
+%sprintf('S_i/S_u %d', S_i/S_u) %DEBUG REMOVE
+sprintf('I_u/I_i %d at time %d', I_u/I_i, t) %DEBUG REMOVE
 %sprintf('total pop across all compartments at time %d', t) %DEBUG REMOVE
 %disp(S_u+S_i+I_u+I_i+H_u+H_i+R_i+R_u+D_u+D_i) %DEBUG_REMOVE
 
-I = I_u + I_i;
+
+
+%if I >= 8  %DEBUG_REMOVE
+%    sprintf("it happened at time %d", t)
+%    return
+%end
+
 
 beta = Beta(default_beta, t, time_varying_beta_on);  % contact rate. currently an arbitrarily chosen value.  when we include age structuring, we will abandon this in favor of a contact matrix
 
