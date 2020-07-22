@@ -55,17 +55,27 @@ unemployment_vector = AssimilateMonthlyUnemploymentData(unemployment_data);
 
 
 %----------gain of coverage--------
-
 t_start_coverage  = 20; % day on which universal coverage is passed  % TINKER WITH ME
-fraction_each_time_step_that_gains_coverage = 1/10; % TINKER WITH ME!
 
+fraction_each_time_step_that_gains_coverage = 1/10; % TINKER WITH ME! % for step function
 
-coverage_implementation_window = 100; % days in which all susceptible uninsured become susceptible insured  %NOT WORKING YET!
+delta_period = 10;  % relevant if using periodic delta gain function
+
+%syms gain_func(x)
+coverage_implementation_type = 1; % 1 is step function at time t, 2 is periodic delta
+
+%if coverage_implementation_type == 1
+%    gain_func(x) = fraction_each_time_step_that_gains_coverage * heaviside(x-t_start_coverage);
+%elseif coverage_implementation_type == 2
+%    gain_func(x) = dirac(mod(x, delta_period));
+%end
+
 
 
 
 %----------turn off or on features-------------
 universal_coverage_feature = 1; % 0 is off
+
 unemployment_feature = 1; % on or off, 0 is off ...this helps us simulate baseline resutlts
 time_varying_beta = 0; % 0 is off
 
@@ -78,14 +88,14 @@ tf = 150; % unit = days
 time_steps = 150;
 tee=linspace(t0,tf,time_steps);
 
-[t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, t_start_coverage, coverage_implementation_window, fraction_each_time_step_that_gains_coverage), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
+%[t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, t_start_coverage, coverage_implementation_type, fraction_each_time_step_that_gains_coverage), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
 
 
 %-------------Let's plot the results-----------------
 
-compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_window, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
-getPeakICUHospitalizations(y(5),y(6))
-getPeakDeaths(y(9),y(10))
+compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_type,fraction_each_time_step_that_gains_coverage, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
+%getPeakICUHospitalizations(y(5),y(6))
+%getPeakDeaths(y(9),y(10))
 
 %figure(); 
 %plot(t,y)
@@ -97,7 +107,10 @@ getPeakDeaths(y(9),y(10))
 
 %----------function declarations/definitions below this line------------%
 
-function aprime = sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, daily_unemployment_vec, eta, unemployment_feature, time_varying_beta_on, default_beta, universal_coverage_feature, t_start_coverage, coverage_implementation_window, fraction_each_time_step_that_gains_coverage)
+
+
+
+function aprime = sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, daily_unemployment_vec, eta, unemployment_feature, time_varying_beta_on, default_beta, universal_coverage_feature, t_start_coverage, coverage_implementation_type, fraction_each_time_step_that_gains_coverage)
 
 S_u = y(1); 
 S_i = y(2); 
@@ -122,7 +135,7 @@ l = 0;
 g = 0;
 
 if (t > t_start_coverage) & (universal_coverage_feature ~= 0)
-    g = fraction_each_time_step_that_gains_coverage;
+    g = gain_func(t, coverage_implementation_type, fraction_each_time_step_that_gains_coverage);
 elseif unemployment_feature ~= 0  % we don't allow unemployment data once universal coverage is in play
     if daily_unemployment_vec(round(t)) > 0  %note: t is not necessarily an integer so we round
         l = eta*daily_unemployment_vec(round(t));
@@ -153,6 +166,21 @@ daily_unemployment_vec = interp1(1:length(unemployment_vector), unemployment_vec
 
 end
 
+function y = gain_func(x, implementation_type, fraction_each_time_step_that_gains_coverage)
+
+t_start_coverage  = 20; % day on which universal coverage is passed  % TINKER WITH ME
+
+%fraction_each_time_step_that_gains_coverage = 1/10; % TINKER WITH ME! % for step function
+
+delta_period = 10;  % relevant if using periodic delta gain function
+
+if implementation_type == 1
+    y = fraction_each_time_step_that_gains_coverage * heaviside(x-t_start_coverage);
+elseif implementation_type == 2
+    y = dirac(mod(x, delta_period));
+end
+
+end
 
 function beta = Beta(default_val,t,on)
 % this function returns the time-varying beta
@@ -187,11 +215,11 @@ val = max(combined_vec);
     
 end
 
-function compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_window, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
+function compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_type,fraction_each_time_step_that_gains_coverage, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
     mat = [];
     for start_day = 1:20
         for k = 1:300 % we will take 1/k to be the fraction gaining coverage on each time step
-            [t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, 1/k, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, start_day, coverage_implementation_window, 1/k), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
+            [t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, 1/30, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, start_day, coverage_implementation_type,fraction_each_time_step_that_gains_coverage), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
             mat(start_day,k) = getPeakDeaths(y(9),y(10));
         end
     end
@@ -271,6 +299,13 @@ subplot(7,2,10)
 plot(t,y(:,10),'-o','Color',color(6,:))
 hold on
 title('Dead (Insured)')
+xlim([t0 tf])
+
+
+subplot(7,2,11)
+plot(t,g,'-o','Color',color(7,:))
+hold on
+title('universal coverage')
 xlim([t0 tf])
 
 
