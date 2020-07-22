@@ -2,11 +2,12 @@
 
 clear all
 close all
+clc
 
 % -----------------------initial population------------------------------
 
-S_u_0 = 26e6;  %26 million...this is the initial number of uninsured susceptible people (we will use US data here, for now)
-S_i_0 = 300e6;  % 300 million
+S_u_0 = 27.5e6;  %26 million...this is the initial number of uninsured susceptible people (we will use US data here, for now)
+S_i_0 = 296e6;  % 300 million
 
 I_u_0 = 1; I_i_0 = 1;
 H_u_0 = 0; H_i_0 = 0;
@@ -29,9 +30,11 @@ c_i = 0.045; % we want to ensure that c_u > c_i so we start with a c_i that is s
 
 c_u = (h - p_i*c_i)/p_u % probability that uninsured symptomatic infected will need ICU hospitalization
 
+k = 0.23 % probability that ICU patient will die.  taken from literature.  k = p_u*d_u + p_i * d_i
 
-d_u = 0.6; % probability that uninsured ICU patient will die % we will need to find a systematic way to determine this
-d_i = 0.55; % make sure d_u > d_i
+d_i = 0.225; % set d_i slightly lower than k
+d_u = (k - p_i*d_i)/p_u;
+
 
 alpha_u = 1/14; % rate at which ICU Hosptializations rocever
 alpha_i = 1/14; 
@@ -49,6 +52,7 @@ ksi_i = 1/3;
 eta = 1/30;  % rate at which insured susceptible -> uninsured susceptible  (30 days <- we need to figure out if this is viable number!)
 
 unemployment_data = [3.6, 3.5, 4.4, 14.7, 13.3, 11.1]; % unemployment percent each month jan 2020 to june 2020...taken from https://data.bls.gov/timeseries/LNS14000000
+diff(unemployment_data) %DEBUG_REMOVE
 unemployment_vector = AssimilateMonthlyUnemploymentData(unemployment_data);
 
 
@@ -62,7 +66,7 @@ fraction_each_time_step_that_gains_coverage = 1/10; % TINKER WITH ME! % for step
 delta_period = 10;  % relevant if using periodic delta gain function
 
 
-coverage_implementation_type = 2; % 1 is step function at time t, 2 is periodic delta
+coverage_implementation_type = 1; % 1 is step function at time t, 2 is periodic delta
 
 
 
@@ -83,7 +87,7 @@ tf = 150; % unit = days
 time_steps = 150;
 tee=linspace(t0,tf,time_steps);
 
-%[t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, t_start_coverage, coverage_implementation_type, fraction_each_time_step_that_gains_coverage, delta_period), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
+[t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, t_start_coverage, coverage_implementation_type, fraction_each_time_step_that_gains_coverage, delta_period), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
 
 
 %-------------Let's plot the results-----------------
@@ -130,7 +134,7 @@ l = 0;
 g = 0;
 
 if (t > t_start_coverage) & (universal_coverage_feature ~= 0)
-    g = gain_func(round(t), t_start_coverage, coverage_implementation_type, fraction_each_time_step_that_gains_coverage, delta_period);
+    g = eta*gain_func(round(t), t_start_coverage, coverage_implementation_type, fraction_each_time_step_that_gains_coverage, delta_period);
 elseif unemployment_feature ~= 0  % we don't allow unemployment data once universal coverage is in play
     if daily_unemployment_vec(round(t)) > 0  %note: t is not necessarily an integer so we round
         l = eta*daily_unemployment_vec(round(t));
@@ -154,19 +158,19 @@ end
 
 function daily_unemployment_vec = AssimilateMonthlyUnemploymentData(data)
 
-baseline_unemployment_fraction = data(1); % take an average pre-pandemic value
-unemployment_vector = data-baseline_unemployment_fraction;
-unemployment_vector = unemployment_vector/100; % percent -> fraction
+unemployment_vector = data/100; % percent -> fraction
+unemployment_vector = diff(unemployment_vector);
+unemployment_vector = [0 unemployment_vector]; % we add 0 to account for the baseline unemployment rate...end of january
 daily_unemployment_vec = interp1(1:length(unemployment_vector), unemployment_vector, 1:1/30:length(unemployment_vector)); % adds 30 points between each end-of-month unemployment fraction 
-
+daily_unemployment_vec = daily_unemployment_vec/30; %here we divide by 30 to get a daily rate
 end
 
 function y = gain_func(x, t_start_coverage, implementation_type, fraction_each_time_step_that_gains_coverage, delta_period)
 
 if implementation_type == 1
-    y = fraction_each_time_step_that_gains_coverage * heaviside(x-t_start_coverage);
+    y = fraction_each_time_step_that_gains_coverage; % we don't need to use heaviside func since we already check t > t_start in sihr func * heaviside(x-t_start_coverage);
 elseif implementation_type == 2
-    y = dirac(mod(x, delta_period));
+    y = dirac(mod(x, delta_period));  % NEED TO MAKE SURE THIS IS WORKING CORRECTLY!
 end
 
 end
@@ -208,7 +212,7 @@ function compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, de
     mat = [];
     if coverage_implementation_type == 1 %step func
         for start_day = 1:20
-            for k = 1:300 % we will take 1/k to be the fraction gaining coverage on each time step
+            for k = 1:50 % we will take 1/k to be the fraction gaining coverage on each time step
                 [t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, start_day, coverage_implementation_type,1/k,1), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
                 mat(start_day,k) = getPeakDeaths(y(9),y(10));
             end
