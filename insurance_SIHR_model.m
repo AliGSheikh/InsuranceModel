@@ -18,7 +18,11 @@ N = S_u_0 + S_i_0; % total population remains constant
 
 
 %---------setting and computing parameters ----------------------------%
-beta = 0.25; % contact rate % taken from literature...mask or not to mask paper here
+beta = 0.5; % contact rate % taken from literature...mask or not to mask paper here
+global multiply_beta_by_next;
+multiply_beta_by_next = 0; 
+global beta_values;
+beta_values = [];
 
 p_i = S_i_0/(S_i_0+S_u_0); % percentage of total population that is insured
 p_u = S_u_0/(S_i_0+S_u_0);
@@ -80,6 +84,7 @@ time_varying_beta = 0; % 0 is off
 
 
 
+
 %----------Let's solve this thing!-----------------
 t0 = 1;
 tf = 150; % unit = days
@@ -102,10 +107,12 @@ D_u = y(:,9);
 D_i = y(:,10);
 
 
+
+
 compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_type, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
-getPeakInfections(I_u,I_i)
-getPeakICUHospitalizations(H_u,H_i)
-getTotalDeaths(D_u, D_i)
+%getPeakInfections(I_u,I_i)
+%getPeakICUHospitalizations(H_u,H_i)
+%getTotalDeaths(D_u, D_i)
 
 
 %figure(); 
@@ -113,6 +120,11 @@ getTotalDeaths(D_u, D_i)
 %legend %labels lines
 
 %plotCompartmentsSeparately(t, y, t0, tf, unemployment_feature, time_varying_beta, unemployment_vector)
+
+%figure()
+%plot(beta_values)
+
+
 
 
 
@@ -142,6 +154,14 @@ I = I_u + I_i;
 
 beta = Beta(default_beta, t, time_varying_beta_on);  % contact rate. currently an arbitrarily chosen value.  when we include age structuring, we will abandon this in favor of a contact matrix
 
+global beta_values;
+beta_values = [beta_values beta];
+%
+
+
+%
+
+
 l = 0; 
 g = 0;
 
@@ -155,6 +175,20 @@ elseif unemployment_feature ~= 0  % we don't allow unemployment data once univer
     end
 end
 
+
+dS_u_dt = -beta * S_u * I / N + l * S_i - g * S_u; 
+dS_i_dt = -beta * S_i * I / N - l * S_i + g * S_u; 
+dI_u_dt =   beta * S_u * I / N - (gamma_u * c_u * I_u) - delta_u * (1-c_u) * I_u; % dI_u/dt
+dI_i_dt = beta * S_i * I / N - (gamma_i * c_i * I_i) - delta_i * (1-c_i) * I_i; % dI_i/dt
+dH_u_dt =  gamma_u * c_u * I_u - (ksi_u * d_u * H_u) - alpha_u * (1 - d_u) * H_u; % dH_u/dt
+dH_i_dt =  gamma_i * c_i * I_i - (ksi_i * d_i * H_i) - alpha_i * (1 - d_i) * H_i; % dH_i/dt
+dR_u_dt =  delta_u * (1-c_u) * I_u + alpha_u * (1 - d_u) * H_u; % dR_u/dt
+dR_i_dt =  delta_i * (1-c_i) * I_i + alpha_i * (1 - d_i) * H_i; % dR_i/dt
+dD_u_dt =  ksi_u * d_u * H_u; % dD_u/dt
+dD_i_dt = ksi_i * d_i * H_i; % dD_i/dt 
+
+global multiply_beta_by_next;
+multiply_beta_by_next = dH_i_dt/(H_i+1);
 
 aprime = [-beta * S_u * I / N + l * S_i - g * S_u; % dS_u/dt
     -beta * S_i * I / N - l * S_i + g * S_u; % dS_i/dt
@@ -189,12 +223,19 @@ end
 
 function beta = Beta(default_val,t,on)
 % this function returns the time-varying beta
-beta = default_val; % default value
+global multiply_beta_by_next;
+if multiply_beta_by_next > 0
+    beta = default_val*(1-multiply_beta_by_next); % default value
+else
+    beta = default_val;
+end
 if on == 1
     events = [0.5, 0.25, 0.25, 0.2, 0.15, 0.4]; % this is taken from data...represents changes in beta month to month starting in january
     beta_vec = interp1(1:length(events), events, 1:1/30:length(events)); % adds 30 points between each  
     beta = beta_vec(round(t));    
 end
+
+
 end
 
 
@@ -221,12 +262,15 @@ val = max(combined_vec);
 end
 
 function compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_type, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
-    peak_deaths = [];
-    peak_hosp = [];
+    %peak_deaths = [];
+    %peak_hosp = [];
     total_start_days=140;
+    k_end = 200;
+    peak_hosp = zeros(total_start_days, k_end);
+    peak_deaths = zeros(total_start_days, k_end);
     if coverage_implementation_type == 1 %step func
         for start_day = 1:total_start_days
-            for k = 1:200 % we will take 1/k to be the fraction gaining coverage on each time step
+            for k = 1:k_end % we will take 1/k to be the fraction gaining coverage on each time step
                 [t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, start_day, coverage_implementation_type,1/k,1), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
                 peak_deaths(start_day,k) = getTotalDeaths(y(:,9),y(:,10));
                 peak_hosp(start_day,k) = getPeakICUHospitalizations(y(:,5),y(:,6));
@@ -265,7 +309,6 @@ function plotCompartmentsSeparately(t,y,t0,tf, unemployment_factor, time_varying
 % below we plot the results
 color = get(gca,'colororder'); % different colors for plotting
 
-figure()
 subplot(7,2,1)
 plot(t,y(:,1),'-o','Color',color(1,:))
 hold on
@@ -331,6 +374,9 @@ xlim([t0 tf])
 
 
 % below we plot beta and unemployment
+
+
+
 size(t); %DEBUG_REMOVE
 unemployment_vec(:,151) = []; % have to remove one entry to match size of t vector
 
@@ -345,7 +391,6 @@ xlim([t0 tf])
 size(unemployment_vec); %DEBUG_REMOVE
 subplot(7,2,14)
 plot(t,unemployment_vec','-o','Color',color(7,:))
-hold on
 title('Unemployment')
 xlim([t0 tf])
 
