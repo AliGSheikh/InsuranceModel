@@ -18,7 +18,7 @@ N = S_u_0 + S_i_0; % total population remains constant
 
 
 %---------setting and computing parameters ----------------------------%
-beta = 0.5; % contact rate % taken from literature...mask or not to mask paper here
+beta = 0.25; % contact rate % taken from literature...mask or not to mask paper here
 global multiply_beta_by_next;
 multiply_beta_by_next = 0; 
 global beta_values;
@@ -110,9 +110,9 @@ D_i = y(:,10);
 
 
 compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_type, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
-%getPeakInfections(I_u,I_i)
-%getPeakICUHospitalizations(H_u,H_i)
-%getTotalDeaths(D_u, D_i)
+getPeakInfections(I_u,I_i)
+getPeakICUHospitalizations(H_u,H_i)
+getTotalDeaths(D_u, D_i)
 
 
 %figure(); 
@@ -122,7 +122,7 @@ compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, de
 %plotCompartmentsSeparately(t, y, t0, tf, unemployment_feature, time_varying_beta, unemployment_vector)
 
 %figure()
-%plot(beta_values)
+plot(beta_values)
 
 
 
@@ -262,15 +262,18 @@ val = max(combined_vec);
 end
 
 function compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_type, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
-    %peak_deaths = [];
-    %peak_hosp = [];
-    total_start_days=140;
-    k_end = 200;
+    disp('we here')
+    total_start_days=50;
+    k_end = 50;
     peak_hosp = zeros(total_start_days, k_end);
     peak_deaths = zeros(total_start_days, k_end);
     if coverage_implementation_type == 1 %step func
         for start_day = 1:total_start_days
             for k = 1:k_end % we will take 1/k to be the fraction gaining coverage on each time step
+                global multiply_beta_by_next;
+                multiply_beta_by_next = 0; 
+                global beta_values;
+                beta_values = [];
                 [t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, unemployment_vector, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, start_day, coverage_implementation_type,1/k,1), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
                 peak_deaths(start_day,k) = getTotalDeaths(y(:,9),y(:,10));
                 peak_hosp(start_day,k) = getPeakICUHospitalizations(y(:,5),y(:,6));
