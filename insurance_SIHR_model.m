@@ -18,7 +18,7 @@ N = S_u_0 + S_i_0; % total population remains constant
 
 
 %---------setting and computing parameters ----------------------------%
-beta = 0.25; % contact rate % taken from literature...mask or not to mask paper here
+beta = 0.5; % contact rate % taken from literature...mask or not to mask paper here
 global multiply_beta_by_next;
 multiply_beta_by_next = 0; 
 global beta_values;
@@ -119,7 +119,7 @@ getTotalDeaths(D_u, D_i)
 %plot(t,y)
 %legend %labels lines
 
-%plotCompartmentsSeparately(t, y, t0, tf, unemployment_feature, time_varying_beta, unemployment_vector)
+plotCompartmentsSeparately(t, y, t0, tf, unemployment_feature, time_varying_beta, unemployment_vector)
 
 %figure()
 plot(beta_values)
