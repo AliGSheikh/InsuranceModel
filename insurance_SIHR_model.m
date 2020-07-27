@@ -56,6 +56,7 @@ ksi_i = 1/3;
 eta = 1/30;  % rate at which insured susceptible -> uninsured susceptible  (30 days <- we need to figure out if this is viable number!)
 
 unemployment_data = [3.6, 3.5, 4.4, 14.7, 13.3, 11.1]; % unemployment percent each month jan 2020 to june 2020...taken from https://data.bls.gov/timeseries/LNS14000000
+
 unemployment_vector = AssimilateMonthlyUnemploymentData(unemployment_data);
 
 
@@ -79,7 +80,8 @@ coverage_implementation_type = 1; % 1 is step function at time t, 2 is periodic 
 universal_coverage_feature = 1; % 0 is off
 
 unemployment_feature = 1; % on or off, 0 is off ...this helps us simulate baseline resutlts
-time_varying_beta = 0; % 0 is off
+
+time_varying_beta = 1; % 0 is off
 
 
 
@@ -121,7 +123,7 @@ getTotalDeaths(D_u, D_i)
 
 plotCompartmentsSeparately(t, y, t0, tf, unemployment_feature, time_varying_beta, unemployment_vector)
 
-%figure()
+figure()
 plot(beta_values)
 
 
@@ -224,17 +226,11 @@ end
 function beta = Beta(default_val,t,on)
 % this function returns the time-varying beta
 global multiply_beta_by_next;
-if multiply_beta_by_next > 0
+if (multiply_beta_by_next > 0) & (on == 1)
     beta = default_val*(1-multiply_beta_by_next); % default value
 else
     beta = default_val;
 end
-if on == 1
-    events = [0.5, 0.25, 0.25, 0.2, 0.15, 0.4]; % this is taken from data...represents changes in beta month to month starting in january
-    beta_vec = interp1(1:length(events), events, 1:1/30:length(events)); % adds 30 points between each  
-    beta = beta_vec(round(t));    
-end
-
 
 end
 
