@@ -81,7 +81,7 @@ universal_coverage_feature = 1; % 0 is off
 
 unemployment_feature = 1; % on or off, 0 is off ...this helps us simulate baseline resutlts
 
-time_varying_beta = 1; % 0 is off
+time_varying_beta = 0; % 0 is off
 
 
 
