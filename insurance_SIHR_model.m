@@ -99,7 +99,8 @@ D_u = y(:,9);
 D_i = y(:,10);
 
 
-compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_type, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
+
+%compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_type, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
 
 
 sprintf("peak infections %d", getPeakInfections(I_u,I_i))
@@ -112,6 +113,8 @@ plotCompartmentsSeparately(t, y, t0, tf)
 plotLossOfCoverage();
 
 plotBeta();
+
+plotAsFractions(t,y, t0, tf);
 
 
 %----------function declarations/definitions below this line------------%
@@ -362,5 +365,35 @@ plot(t,y(:,10),'-o','Color',color(6,:))
 hold on
 title('Dead (Insured)')
 xlim([t0 tf])
+
+end
+
+
+
+function plotAsFractions(t, y, t0, tf)
+
+fntsz=16;
+labels={'S_u','S_i','I_u','I_i','H_u','H_i','R_u','R_i','D_u','D_i'};
+pltcolors={'blue','blue','red','red','green','green','magenta','magenta','cyan','cyan'};
+pltstyles={'--','-'};
+figure('Position',[100,100,800,400]);
+hold on;
+set(gca,'FontSize',fntsz,'defaultTextInterpreter','latex')
+Nu=sum(y(:,1:2:end),2); %compute total uninsured at each time
+Ni=sum(y(:,2:2:end),2); %compoute total insured at each time
+Ncompartments=size(y,2)/2;
+for jj=1:Ncompartments
+    %plot fraction uninsured in each compartment
+    plot(t,y(:,2*jj-1)./Nu,'LineWidth',2,'Color',pltcolors{2*jj-1},'LineStyle','-')
+    %plot fraction insured in each compartment
+    plot(t,y(:,2*jj)./Ni,'LineWidth',2,'Color',pltcolors{2*jj},'LineStyle','--')
+end
+legend(labels); %legend
+xlim([t0 tf])
+xlabel('$t$ (days)')
+ylabel('fraction of insured or uninsured')
+%save as eps file with base name and tack on initial uninsured
+print([pltdir fnm 'SuInit' num2str(S_u_0)  '.eps'],'-depsc')
+
 
 end
