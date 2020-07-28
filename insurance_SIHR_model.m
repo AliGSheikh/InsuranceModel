@@ -100,7 +100,7 @@ D_i = y(:,10);
 
 
 
-%compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_type, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
+compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_type, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
 
 
 sprintf("peak infections %d", getPeakInfections(I_u,I_i))
@@ -148,11 +148,7 @@ u = unemployment_val(H_i+H_u, unemployment_feature);
 if (t > t_start_coverage) & (universal_coverage_feature ~= 0)
     g = eta*gain_func(round(t), coverage_implementation_type, fraction_each_time_step_that_gains_coverage, delta_period);
 elseif unemployment_feature ~= 0  % we don't allow unemployment data once universal coverage is in play
-    if u > 0  %note: t is not necessarily an integer so we round
-        l = eta*u;
-    elseif u < 0
-        g = -eta*u;
-    end
+    l = eta*u;
 end
 
 
@@ -392,8 +388,5 @@ legend(labels); %legend
 xlim([t0 tf])
 xlabel('$t$ (days)')
 ylabel('fraction of insured or uninsured')
-%save as eps file with base name and tack on initial uninsured
-print([pltdir fnm 'SuInit' num2str(S_u_0)  '.eps'],'-depsc')
-
 
 end
