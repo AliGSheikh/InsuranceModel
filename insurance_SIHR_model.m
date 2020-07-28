@@ -98,14 +98,14 @@ R_i = y(:,8);
 D_u = y(:,9); 
 D_i = y(:,10);
 
+sprintf("peak infections %d", getPeakInfections(I_u,I_i))
+sprintf("peak ICU hosp %d", getPeakICUHospitalizations(H_u,H_i))
+sprintf("total deaths %d", getTotalDeaths(D_u, D_i))
 
 
 compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_type, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
 
 
-sprintf("peak infections %d", getPeakInfections(I_u,I_i))
-sprintf("peak ICU hosp %d", getPeakICUHospitalizations(H_u,H_i))
-sprintf("total deaths %d", getTotalDeaths(D_u, D_i))
 
 
 plotCompartmentsSeparately(t, y, t0, tf)
@@ -232,8 +232,8 @@ val = max(combined_vec);
 end
 
 function compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_type, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
-    total_start_days=100;
-    k_end = 50;
+    total_start_days=150;
+    k_end = 100;
     peak_hosp = zeros(total_start_days, k_end);
     peak_deaths = zeros(total_start_days, k_end);
     if coverage_implementation_type == 1 %step func
@@ -248,6 +248,7 @@ function compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, de
                 peak_hosp(start_day,k) = getPeakICUHospitalizations(y(:,5),y(:,6));
             end
         end
+        figure()
         [C,h] = contourf(peak_deaths)
         clabel(C,h)
         title('Total Death')
@@ -300,7 +301,7 @@ function plotCompartmentsSeparately(t,y,t0,tf)
 
 % below we plot the results
 color = get(gca,'colororder'); % different colors for plotting
-
+figure()
 subplot(5,2,1)
 plot(t,y(:,1),'-o','Color',color(1,:))
 hold on
