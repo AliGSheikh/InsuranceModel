@@ -53,10 +53,6 @@ eta = 1/30;  % rate at which insured susceptible <-> uninsured susceptible  (30 
 global loss_values;
 loss_values = [];
 
-
-global gain_values;
-gain_values = [];
-
 %----------gain of coverage--------
 t_start_coverage  = 150; % day on which universal coverage is passed  % TINKER WITH ME
 
@@ -106,7 +102,7 @@ sprintf("peak ICU hosp %d", getPeakICUHospitalizations(H_u,H_i))
 sprintf("total deaths %d", getTotalDeaths(D_u, D_i))
 
 
-%compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_type, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
+compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_type, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
 
 
 
@@ -114,8 +110,6 @@ sprintf("total deaths %d", getTotalDeaths(D_u, D_i))
 plotCompartmentsSeparately(t, y, t0, tf)
 
 plotLossOfCoverage();
-
-plotGainOfCoverage();
 
 plotBeta();
 
@@ -173,7 +167,7 @@ end
 function loss = unemployment_val(H, on)
 alpha=1;
 k = 1e5; % threshold
-extreme_val = 0.005; % this amount to approx the maximum percent of people that we have seen unemployed in a single day, on average (taken from monthly unemployment data in 2020)
+extreme_val = 1; % this amount to approx the maximum percent of people that we have seen unemployed in a single day, on average (taken from monthly unemployment data in 2020)
 
 if on == 1
     loss = extreme_val*(alpha*H/(H+k));
@@ -194,9 +188,6 @@ if implementation_type == 1
 elseif implementation_type == 2
     y = dirac(mod(x, delta_period));  % NEED TO MAKE SURE THIS IS WORKING CORRECTLY!
 end
-
-global gain_values;
-gain_values = [gain_values y];
 
 end
 
@@ -240,8 +231,8 @@ val = max(combined_vec);
 end
 
 function compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_type, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
-    total_start_days=150;
-    k_end = 100;
+    total_start_days=100;
+    k_end = 50;
     peak_hosp = zeros(total_start_days, k_end);
     peak_deaths = zeros(total_start_days, k_end);
     if coverage_implementation_type == 1 %step func
@@ -305,15 +296,6 @@ function plotLossOfCoverage()
 
 end
 
-function plotGainOfCoverage()
-    global gain_values;
-    figure()
-    plot(gain_values);
-    title('G(t)')
-    xlabel('time (ODE solution time steps)') 
-    ylabel('G(t)')
-
-end
 
 function plotCompartmentsSeparately(t,y,t0,tf)
 
