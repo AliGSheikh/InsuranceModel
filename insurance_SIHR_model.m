@@ -58,6 +58,9 @@ t_start_coverage  = 150; % day on which universal coverage is passed  % TINKER W
 
 fraction_each_time_step_that_gains_coverage = 1/20; % TINKER WITH ME! % for step function
 
+
+
+
 delta_period = 10;  % relevant if using periodic delta gain function
 
 
@@ -68,7 +71,7 @@ coverage_implementation_type = 1; % 1 is step function at time t, 2 is periodic 
 
 
 %----------turn off or on features-------------
-universal_coverage_feature = 1; % 0 is off
+universal_coverage_feature = 0; % 0 is off
 
 unemployment_feature = 1; % on or off, 0 is off ...this helps us simulate baseline resutlts
 
@@ -78,7 +81,7 @@ time_varying_beta = 1; % 0 is off
 
 %----------Let's solve this thing!-----------------
 t0 = 1;
-tf = 600; % unit = days
+tf = 8500; % unit = days
 time_steps = 600;
 tee=linspace(t0,tf,time_steps);
 
@@ -100,20 +103,22 @@ D_i = y(:,10);
 sprintf("peak infections %d", getPeakInfections(I_u,I_i))
 sprintf("peak ICU hosp %d", getPeakICUHospitalizations(H_u,H_i))
 sprintf("total deaths %d", getTotalDeaths(D_u, D_i))
+sprintf("infections remaining %d", getInfectionsRemaining(I_u, I_i))
 
 
-compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_type, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
+%compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_type, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
 
 
 
 
-plotCompartmentsSeparately(t, y, t0, tf)
+%plotCompartmentsSeparately(t, y, t0, tf)
 
-plotLossOfCoverage();
+%plotLossOfCoverage();
 
-plotBeta();
+%plotBeta();
 
-plotAsFractions(t,y, t0, tf);
+%plotAsFractions(t,y, t0, tf);
+
 
 
 %----------function declarations/definitions below this line------------%
@@ -165,9 +170,9 @@ end
 
 
 function loss = unemployment_val(H, on)
-alpha=1;
+alpha=1; % confidence
 k = 1e5; % threshold
-extreme_val = 1; % this amount to approx the maximum percent of people that we have seen unemployed in a single day, on average (taken from monthly unemployment data in 2020)
+extreme_val = 0.005; % this amount to approx the maximum percent of people that we have seen unemployed in a single day, on average (taken from monthly unemployment data in 2020)
 
 if on == 1
     loss = extreme_val*(alpha*H/(H+k));
@@ -191,7 +196,7 @@ end
 
 end
 
-function beta = Beta(default_val,on, H)
+function beta = Beta(default_val, on, H)
 % this function returns the time-varying beta
 alpha = 1;% confidence
 k = 1e5; % threshold
@@ -218,6 +223,13 @@ val = max(combined_vec);
  
 end
 
+function val = getInfectionsRemaining(uninsured_vec,insured_vec)
+
+combined_vec = uninsured_vec + insured_vec;
+
+val = combined_vec(end)
+end
+
 function val = getPeakICUHospitalizations(uninsured_vec,insured_vec)
 combined_vec = uninsured_vec + insured_vec;
 val = max(combined_vec);
@@ -231,8 +243,8 @@ val = max(combined_vec);
 end
 
 function compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, coverage_implementation_type, tee, S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0)
-    total_start_days=100;
-    k_end = 50;
+    total_start_days=150;
+    k_end = 100;
     peak_hosp = zeros(total_start_days, k_end);
     peak_deaths = zeros(total_start_days, k_end);
     if coverage_implementation_type == 1 %step func
@@ -364,7 +376,6 @@ title('Dead (Insured)')
 xlim([t0 tf])
 
 end
-
 
 
 function plotAsFractions(t, y, t0, tf)
