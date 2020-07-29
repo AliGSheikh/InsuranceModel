@@ -18,7 +18,11 @@ N = S_u_0 + S_i_0; % total population remains constant
 
 
 %---------setting and computing parameters ----------------------------%
-beta = 0.5; % contact rate % taken from literature...mask or not to mask paper here
+%beta = 0.5; % contact rate % taken from literature...mask or not to mask paper here
+
+desired_R_0 = 3; % to be taken from literature
+beta = getInitialBetaFromR0(desired_R_0, S_u_0, N, delta_u, c_u, gamma_u,S_i_0, delta_i, c_i, gamma_i);
+
 
 global beta_values;
 beta_values = [];
@@ -75,7 +79,7 @@ universal_coverage_feature = 0; % 0 is off
 
 unemployment_feature = 1; % on or off, 0 is off ...this helps us simulate baseline resutlts
 
-time_varying_beta = 1; % 0 is off
+time_varying_beta = 0.5; % 0 is off
 
 
 
@@ -118,6 +122,7 @@ sprintf("infections remaining %d", getInfectionsRemaining(I_u, I_i))
 %plotBeta();
 
 %plotAsFractions(t,y, t0, tf);
+
 
 
 
@@ -213,6 +218,27 @@ beta_values = [beta_values beta];
 end
 
 
+function initial_beta = getInitialBetaFromR0(R_0, S_u_0, N, delta_u, c_u, gamma_u,S_i_0, delta_i, c_i, gamma_i)
+    Nscan=11;
+    beta_vals=linspace(0.25,1.5,Nscan);
+    R0_values=zeros(Nscan,1); %initialize vector to store peak uninsured hospitalizations
+
+    for jj=1:Nscan %add a loop to run the simulation for each value
+        
+        beta=beta_vals(jj); 
+        R0_values(jj)=(beta*S_u_0/N)/(delta_u*(1-c_u)+gamma_u*c_u) + (beta*S_i_0/N)/(delta_i*(1-c_i)+gamma_i*c_i);
+    end
+    
+    figure
+plot(beta_vals,R0_values,'o-')
+xlabel('beta')
+ylabel('R_0')
+    
+    initial_beta = interp1(R0_values, beta_vals, R_0,  'linear', 'extrap');
+    
+    
+
+end
 
 %-----------below this line are plotting and measure finding functions-----------
 
