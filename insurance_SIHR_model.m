@@ -18,14 +18,8 @@ N = S_u_0 + S_i_0; % total population remains constant
 
 
 %---------setting and computing parameters ----------------------------%
-%beta = 0.5; % contact rate % taken from literature...mask or not to mask paper here
-
-desired_R_0 = 3; % to be taken from literature
-beta = getInitialBetaFromR0(desired_R_0, S_u_0, N, delta_u, c_u, gamma_u,S_i_0, delta_i, c_i, gamma_i);
 
 
-global beta_values;
-beta_values = [];
 
 p_i = S_i_0/(S_i_0+S_u_0); % percentage of total population that is insured
 p_u = S_u_0/(S_i_0+S_u_0);
@@ -52,6 +46,15 @@ gamma_i = 1/5;
 ksi_u = 1/3;    % death rate from ICU
 ksi_i = 1/3;
 eta = 1/30;  % rate at which insured susceptible <-> uninsured susceptible  (30 days <- we need to figure out if this is viable number!)
+
+
+%beta = 0.5; % contact rate % taken from literature...mask or not to mask paper here
+
+desired_R_0 = 3; % to be taken from literature
+beta = getInitialBetaFromR0(desired_R_0, S_u_0, N, delta_u, c_u, gamma_u,S_i_0, delta_i, c_i, gamma_i)
+
+global beta_values;
+beta_values = [];
 
 
 global loss_values;
@@ -229,10 +232,7 @@ function initial_beta = getInitialBetaFromR0(R_0, S_u_0, N, delta_u, c_u, gamma_
         R0_values(jj)=(beta*S_u_0/N)/(delta_u*(1-c_u)+gamma_u*c_u) + (beta*S_i_0/N)/(delta_i*(1-c_i)+gamma_i*c_i);
     end
     
-    figure
-plot(beta_vals,R0_values,'o-')
-xlabel('beta')
-ylabel('R_0')
+
     
     initial_beta = interp1(R0_values, beta_vals, R_0,  'linear', 'extrap');
     
