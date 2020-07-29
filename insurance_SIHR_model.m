@@ -63,7 +63,7 @@ loss_values = [];
 %----------gain of coverage--------
 t_start_coverage  = 150; % day on which universal coverage is passed  % TINKER WITH ME
 
-fraction_each_time_step_that_gains_coverage = 1/20; % TINKER WITH ME! % for step function
+fraction_each_time_step_that_gains_coverage = 1/5; % TINKER WITH ME! % for step function
 
 
 
@@ -78,18 +78,18 @@ coverage_implementation_type = 1; % 1 is step function at time t, 2 is periodic 
 
 
 %----------turn off or on features-------------
-universal_coverage_feature = 0; % 0 is off
+universal_coverage_feature = 1; % 0 is off
 
 unemployment_feature = 1; % on or off, 0 is off ...this helps us simulate baseline resutlts
 
-time_varying_beta = 0.5; % 0 is off
+time_varying_beta = 1; % 0 is off
 
 
 
 %----------Let's solve this thing!-----------------
 t0 = 1;
-tf = 8500; % unit = days
-time_steps = 600;
+tf = 3000; % unit = days
+time_steps = 1000;
 tee=linspace(t0,tf,time_steps);
 
 [t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, t_start_coverage, coverage_implementation_type, fraction_each_time_step_that_gains_coverage, delta_period), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
@@ -118,13 +118,13 @@ sprintf("infections remaining %d", getInfectionsRemaining(I_u, I_i))
 
 
 
-%plotCompartmentsSeparately(t, y, t0, tf)
+plotCompartmentsSeparately(t, y, t0, tf)
 
-%plotLossOfCoverage();
+plotLossOfCoverage();
 
-%plotBeta();
+plotBeta();
 
-%plotAsFractions(t,y, t0, tf);
+plotAsFractions(t,y, t0, tf);
 
 
 
@@ -206,8 +206,8 @@ end
 
 function beta = Beta(default_val, on, H)
 % this function returns the time-varying beta
-alpha = 1;% confidence
-k = 1e5; % threshold
+alpha = 0.9;% confidence
+k = 1e6; % threshold
 
 if on == 1
     beta = default_val*(1-alpha*H/(H+k));
@@ -286,13 +286,13 @@ function compareCoverageStartToSpeed(N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, de
             end
         end
         figure()
-        [C,h] = contourf(peak_deaths)
+        [C,h] = contourf(peak_deaths);
         clabel(C,h)
         title('Total Death')
         xlabel('k (note: 1/k is the fraction of uninsured that gains coverage each day)') 
         ylabel('Start of Coverage (# days after start of pandemic)') 
         figure()
-        [C,h] = contourf(peak_hosp)
+        [C,h] = contourf(peak_hosp);
         clabel(C,h)
         title('Peak Hosp')
         xlabel('k (note: 1/k is the fraction of uninsured that gains coverage each day)') 
