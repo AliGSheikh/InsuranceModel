@@ -89,7 +89,7 @@ time_varying_beta = 1; % 0 is off
 %----------Let's solve this thing!-----------------
 t0 = 1;
 tf = 3000; % unit = days
-time_steps = 1000;
+time_steps = 3000;
 tee=linspace(t0,tf,time_steps);
 
 [t,y] = ode45(@(t,y) sihr(t, y, N, d_u, d_i, c_u, c_i, alpha_u, alpha_i, delta_u, delta_i, gamma_u, gamma_i, ksi_u, ksi_i, eta, unemployment_feature, time_varying_beta, beta, universal_coverage_feature, t_start_coverage, coverage_implementation_type, fraction_each_time_step_that_gains_coverage, delta_period), tee, [S_u_0, S_i_0, I_u_0, I_i_0, H_u_0, H_i_0, R_u_0, R_i_0, D_u_0,D_i_0]); 
@@ -118,13 +118,49 @@ sprintf("infections remaining %d", getInfectionsRemaining(I_u, I_i))
 
 
 
-plotCompartmentsSeparately(t, y, t0, tf)
+%plotCompartmentsSeparately(t, y, t0, tf)
 
 plotLossOfCoverage();
 
 plotBeta();
 
-plotAsFractions(t,y, t0, tf);
+%plotAsFractions(t,y, t0, tf);
+
+new_betas = recomputeBeta(beta, H_i+H_u, time_varying_beta);
+
+figure()
+yyaxis left
+plot(t,new_betas)
+ylabel('beta')
+hold on
+yyaxis right
+plot(t, H_i+H_u)
+xlabel('t') 
+ylabel('H')
+
+new_Ls = recomputeL(H_i+H_u, unemployment_feature);
+
+figure()
+yyaxis left
+plot(t,new_Ls)
+ylabel('L')
+hold on
+yyaxis right
+plot(t, H_i+H_u)
+xlabel('t') 
+ylabel('H')
+
+
+figure()
+yyaxis left
+plot(H_i+H_u, new_Ls)
+ylabel('L(H)') 
+hold on
+yyaxis right
+plot(H_i+H_u, new_betas)
+xlabel('H') 
+ylabel('beta(H)') 
+
 
 
 
@@ -427,4 +463,22 @@ xlim([t0 tf])
 xlabel('$t$ (days)')
 ylabel('fraction of insured or uninsured')
 
+end
+
+function beta_vals = recomputeBeta(initial_beta, H_array, varying_onoff)
+    beta_vals = [];
+    for n = 1:length(H_array)
+        H = H_array(n);
+        beta_vals = [beta_vals Beta(initial_beta, varying_onoff, H)];
+    end 
+        
+end
+
+function l_vals = recomputeL(H_array, varying_onoff)
+    l_vals = [];
+    for n = 1:length(H_array)
+        H = H_array(n);
+        l_vals = [l_vals unemployment_val(H, varying_onoff)];
+    end 
+        
 end
